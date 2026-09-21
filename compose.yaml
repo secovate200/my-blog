@@ -1,0 +1,28 @@
+services:
+  blog-front:
+    build: ./blog-front
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./blog-front:/app
+      - blog-front-node-modules:/app/node_modules
+
+  dashboard-front:
+    build: ./dashboard-front
+    ports:
+      - "5174:5173"
+    volumes:
+      - ./dashboard-front:/app
+      - dashboard-front-node-modules:/app/node_modules
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+volumes:
+  blog-front-node-modules:
+  dashboard-front-node-modules:
+
