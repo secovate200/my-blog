@@ -1,0 +1,9 @@
+.logo {
+  text-align: center;
+}
+.logo a {
+  font-family: "Bebas Neue", sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  color: var(--text-color);
+}

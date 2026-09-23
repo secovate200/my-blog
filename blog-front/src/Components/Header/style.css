@@ -1,0 +1,20 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0px;
+}
+.headerMenu {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.headerMenu a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+.headerMenu a:hover {
+  color: var(--header-color);
+}
