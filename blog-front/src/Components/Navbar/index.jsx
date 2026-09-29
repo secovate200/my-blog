@@ -1,24 +1,39 @@
-import React from "react";
 import "./style.css";
-import { BiSearch } from "react-icons/bi";
-function Navbar(props) {
+import { BiMoon, BiSearch, BiSun } from "react-icons/bi";
+import { Link } from "react-router-dom";
+
+function Navbar({ theme, onThemeToggle }) {
   return (
     <div className="navbar">
       <ul className="navbarMenu">
         <li>
-          <a href="#">Home</a>
+          <Link to="/">Home</Link>
         </li>
         <li>
-          <a href="#">Category</a>
+          <Link to="/category">Category</Link>
         </li>
         <li>
-          <a href="#">Project</a>
+          <Link to="/contact">Contact</Link>
+        </li>
+        <li>
+          <Link to="/project">Project</Link>
         </li>
       </ul>
       <div className="search">
-        <input type="text" placeholder="Search.." />
-        <button>
-          <BiSearch />
+        <form action="" method="get" name="search">
+          <input type="text" placeholder="Search.." />
+          <button>
+            <BiSearch />
+          </button>
+        </form>
+        <button
+          className="themeToggle"
+          type="button"
+          onClick={onThemeToggle}
+          aria-label={`${theme === "dark" ? "라이트" : "다크"} 모드로 전환`}
+          title={`${theme === "dark" ? "라이트" : "다크"} 모드`}
+        >
+          {theme === "dark" ? <BiSun /> : <BiMoon />}
         </button>
       </div>
     </div>

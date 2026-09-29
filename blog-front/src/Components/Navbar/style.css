@@ -1,26 +1,109 @@
 .navbar {
   padding: 10px 0;
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--content-background);
 }
 .navbar ul {
   margin: 0;
   padding: 0;
+  display: flex;
+  align-items: center;
 }
 .navbar ul li {
   list-style: none;
-  display: inline-block;
 }
 .navbar ul li a {
   text-decoration: none;
   display: block;
-  font-size: 20px;
+  font-size: 15px;
+  line-height: 32px;
+
   text-transform: capitalize;
   padding: 0px 10px;
   color: var(--text-color);
 }
 .search {
   display: flex;
+  align-items: center;
 
   margin: 0px 10px;
+}
+
+.search form {
+  height: 32px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--header-color) 55%, transparent);
+  background: var(--third-background);
+  box-sizing: border-box;
+}
+
+.search input {
+  width: 180px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-size: 13px;
+}
+
+.search input::placeholder {
+  color: var(--sub-text);
+  opacity: 0.75;
+}
+
+.search form button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: 1px solid
+    color-mix(in srgb, var(--header-color) 35%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--third-background) 90%,
+    var(--header-color)
+  );
+  color: var(--text-color);
+  box-sizing: border-box;
+}
+
+.search form button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.themeToggle {
+  margin-left: 6px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--header-color) 55%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--third-background) 90%,
+    var(--header-color)
+  );
+  color: var(--text-color);
+  box-sizing: border-box;
+}
+
+.themeToggle svg {
+  width: 17px;
+  height: 17px;
 }

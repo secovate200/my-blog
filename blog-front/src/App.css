@@ -1,4 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nanum+Gothic:wght@400;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Gothic+A1:wght@700&display=swap");
+
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 :root {
   --background: #dde6ed;
   --text-color: #27374d;
@@ -13,17 +19,17 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: "Nanum Gothic", sans-serif;
-  font-weight: 800;
+  font-family: "Gothic A1", sans-serif;
+  font-weight: 700;
   font-style: normal;
 }
 
 :root[data-theme="dark"] {
-  --background: #1a1d29;
+  --background: #0f111a;
   --text-color: #e6fff7;
   --header-color: #33ffb8;
-  --content-background: #0f111a;
-  --third-background: #262b3d;
+  --content-background: #262b3d;
+  --third-background: #1a1d29;
   --sub-text: #8fa7a0;
 }
 body {
@@ -34,7 +40,30 @@ body {
 
 .App {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1250px;
   margin: 0 auto;
-  border: 1px solid var(--header-color);
+}
+button {
+  cursor: pointer;
+}
+.container {
+  display: flex;
+  gap: 20px;
+  margin: 20px 0px 0px 0px;
+}
+
+.content,
+.profile {
+  min-width: 0;
+}
+
+.content {
+  flex: 3 1 0;
+}
+
+.profile {
+  flex: 1 1 0;
+  align-self: flex-start;
+  position: sticky;
+  top: calc(var(--navbar-height) + 10px);
 }

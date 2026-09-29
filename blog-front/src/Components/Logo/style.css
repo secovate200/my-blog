@@ -1,9 +1,18 @@
+@import url("https://fonts.googleapis.com/css2?family=Bungee+Inline&display=swap");
 .logo {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-}
-.logo a {
-  font-family: "Bebas Neue", sans-serif;
+  font-family: "Bungee Inline", sans-serif;
   font-weight: 400;
-  font-size: 50px;
+  font-style: normal;
+  font-size: 60px;
   color: var(--text-color);
+}
+
+.logo .typed-cursor {
+  color: var(--header-color);
+  font-family: inherit;
 }

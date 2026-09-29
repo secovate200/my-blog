@@ -1,0 +1,101 @@
+.profileCard {
+  padding: 20px 18px;
+  text-align: center;
+  color: var(--text-color);
+}
+
+.profileLogoFrame {
+  width: min(112px, 55%);
+  aspect-ratio: 1;
+  margin: 0 auto 12px;
+}
+
+.profileLogoFrame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.profileRole {
+  margin: 0 0 4px;
+  color: var(--header-color);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+}
+
+.profileCard h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.profileBio {
+  max-width: 260px;
+  margin: 10px auto 0;
+  color: var(--sub-text);
+  font-size: 12px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.profileSocials {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.profileSocials button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--header-color) 45%, transparent);
+  border-radius: 0;
+  color: var(--text-color);
+  background: var(--third-background);
+}
+
+.profileSocials svg {
+  width: 15px;
+  height: 15px;
+}
+
+.profileDivider {
+  height: 1px;
+  margin: 16px 0;
+  background: color-mix(in srgb, var(--header-color) 28%, transparent);
+}
+
+.profileLinks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid color-mix(in srgb, var(--header-color) 35%, transparent);
+}
+
+.profileLinks a {
+  min-width: 0;
+  padding: 8px 4px;
+  color: var(--text-color);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.profileLinks a + a {
+  border-left: 1px solid
+    color-mix(in srgb, var(--header-color) 35%, transparent);
+}
+
+@media (max-width: 760px) {
+  .profileCard {
+    padding: 18px 16px;
+  }
+
+  .profileLogoFrame {
+    width: 104px;
+  }
+}
