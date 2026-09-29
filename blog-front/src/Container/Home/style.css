@@ -1,0 +1,89 @@
+.postFeed {
+  color: var(--text-color);
+}
+
+.postList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.postCard {
+  position: relative;
+  padding: 24px;
+  overflow: hidden;
+  background: var(--content-background);
+}
+
+.postCardMeta,
+.postCardMeta span,
+.postCardFooter {
+  display: flex;
+  align-items: center;
+}
+
+.postCardMeta {
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--sub-text);
+  font-size: 11px;
+}
+
+.postCardMeta span {
+  gap: 6px;
+}
+
+.postCategory {
+  color: var(--header-color);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.postCard h2 {
+  margin: 14px 0 8px;
+  font-size: clamp(18px, 2.2vw, 24px);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+.postExcerpt {
+  margin: 0;
+  color: var(--sub-text);
+  font-size: 13px;
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.postCardFooter {
+  margin-top: 20px;
+  padding-top: 14px;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid color-mix(in srgb, var(--header-color) 20%, transparent);
+  color: var(--sub-text);
+  font-size: 10px;
+}
+
+.postCard svg {
+  width: 13px;
+  height: 13px;
+}
+
+.loadMoreButton {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--header-color) 45%, transparent);
+  border-radius: 0;
+  color: var(--text-color);
+  background: var(--content-background);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 640px) {
+  .postCard {
+    padding: 18px;
+  }
+}

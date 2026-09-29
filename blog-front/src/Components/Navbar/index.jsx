@@ -1,10 +1,30 @@
+import { useEffect, useRef, useState } from "react";
 import "./style.css";
 import { BiMoon, BiSearch, BiSun } from "react-icons/bi";
 import { Link } from "react-router-dom";
 
 function Navbar({ theme, onThemeToggle }) {
+  const navbarRef = useRef(null);
+  const [isStuck, setIsStuck] = useState(false);
+
+  useEffect(() => {
+    const updateStickyState = () => {
+      const navbarTop = navbarRef.current?.getBoundingClientRect().top;
+      setIsStuck(window.scrollY > 0 && navbarTop <= 0);
+    };
+
+    updateStickyState();
+    window.addEventListener("scroll", updateStickyState, { passive: true });
+    window.addEventListener("resize", updateStickyState);
+
+    return () => {
+      window.removeEventListener("scroll", updateStickyState);
+      window.removeEventListener("resize", updateStickyState);
+    };
+  }, []);
+
   return (
-    <div className="navbar">
+    <div ref={navbarRef} className={`navbar ${isStuck ? "navbarStuck" : ""}`}>
       <ul className="navbarMenu">
         <li>
           <Link to="/">Home</Link>

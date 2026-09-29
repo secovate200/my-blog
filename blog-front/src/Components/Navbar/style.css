@@ -8,6 +8,22 @@
   z-index: 10;
   background-color: var(--content-background);
 }
+
+.navbar::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  opacity: 0;
+  background: var(--header-color);
+}
+
+.navbarStuck::after {
+  opacity: 1;
+}
+
 .navbar ul {
   margin: 0;
   padding: 0;
