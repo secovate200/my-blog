@@ -1,0 +1,165 @@
+.postDetailLayout {
+  min-width: 0;
+}
+
+.postDetailLayout > .card {
+  min-width: 0;
+}
+
+.postDetail,
+.postNotFound {
+  padding: 28px;
+  color: var(--text-color);
+}
+
+.postBackLink,
+.postNotFound a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sub-text);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.postBackLink:hover,
+.postBackLink:focus-visible,
+.postNotFound a:hover,
+.postNotFound a:focus-visible {
+  color: var(--header-color);
+}
+
+.postDetailHeader {
+  margin-top: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid color-mix(in srgb, var(--header-color) 20%, transparent);
+}
+
+.postDetailMeta,
+.postDetailMeta time,
+.postDetailTags {
+  display: flex;
+  align-items: center;
+}
+
+.postDetailMeta {
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--sub-text);
+  font-size: 10px;
+}
+
+.postDetailMeta a {
+  color: var(--header-color);
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.postDetailMeta time {
+  gap: 6px;
+}
+
+.postDetailHeader h1 {
+  margin: 16px 0;
+  font-size: clamp(24px, 4vw, 36px);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+.postDetailTags {
+  gap: 9px;
+  flex-wrap: wrap;
+  color: var(--sub-text);
+  font-size: 10px;
+}
+
+.postDetailTags a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.postDetailTags a:hover,
+.postDetailTags a:focus-visible {
+  color: var(--header-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.postTableOfContents {
+  margin-bottom: 20px;
+  padding: 18px;
+  border-left: 3px solid var(--header-color);
+  background: var(--third-background);
+  box-sizing: border-box;
+}
+
+.postTableOfContents > strong {
+  color: var(--header-color);
+  font-size: 12px;
+}
+
+.postTableOfContents ol {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  color: var(--sub-text);
+  font-size: 11px;
+  line-height: 2;
+}
+
+.postTableOfContents a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.postTableOfContents a:hover,
+.postTableOfContents a:focus-visible {
+  color: var(--header-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.postDetailBody {
+  padding: 28px 0 8px;
+}
+
+.postSection {
+  margin-bottom: 34px;
+  scroll-margin-top: calc(var(--navbar-height) + 18px);
+}
+
+.postSection h2 {
+  margin: 0 0 12px;
+  color: var(--text-color);
+  font-size: clamp(18px, 2.4vw, 24px);
+}
+
+.postSection p {
+  margin: 0;
+  color: var(--sub-text);
+  font-size: 14px;
+  line-height: 2;
+  word-break: keep-all;
+}
+
+.postNotFound {
+  text-align: center;
+}
+
+.postNotFound > span {
+  color: var(--header-color);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.postNotFound h1 {
+  margin: 12px 0 24px;
+  font-size: 22px;
+}
+
+@media (max-width: 640px) {
+  .postDetail,
+  .postNotFound {
+    padding: 20px 18px;
+  }
+}

@@ -1,0 +1,90 @@
+.categoryArchive {
+  padding: 28px;
+  color: var(--text-color);
+}
+
+.taxonomySection {
+  margin-top: 28px;
+}
+
+.taxonomySection:first-child {
+  margin-top: 0;
+}
+
+.taxonomySection h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: var(--header-color);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.taxonomySection h2 svg {
+  width: 15px;
+  height: 15px;
+}
+
+.taxonomyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.taxonomyItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--header-color) 22%, transparent);
+  color: var(--text-color);
+  background: var(--third-background);
+  text-decoration: none;
+}
+
+.taxonomyItem:hover,
+.taxonomyItem:focus-visible {
+  border-color: var(--header-color);
+  color: var(--header-color);
+}
+
+.taxonomyItem strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  color: var(--sub-text);
+  background: color-mix(in srgb, var(--header-color) 12%, transparent);
+  box-sizing: border-box;
+  font-size: 9px;
+}
+
+.categoryItem {
+  padding: 13px 14px;
+  font-size: 12px;
+}
+
+.tagCloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagItem {
+  padding: 8px 9px;
+  font-size: 10px;
+}
+
+@media (max-width: 640px) {
+  .categoryArchive {
+    padding: 20px 18px;
+  }
+
+  .taxonomyGrid {
+    grid-template-columns: 1fr;
+  }
+}

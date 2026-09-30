@@ -13,6 +13,12 @@
   padding: 24px;
   overflow: hidden;
   background: var(--content-background);
+  cursor: pointer;
+}
+
+.postCard:focus-visible {
+  outline: 2px solid var(--header-color);
+  outline-offset: 2px;
 }
 
 .postCardMeta,
@@ -31,6 +37,22 @@
 
 .postCardMeta span {
   gap: 6px;
+}
+
+.postFilterButton {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.postFilterButton:hover,
+.postFilterButton:focus-visible,
+.postFilterButton.isActive {
+  color: var(--header-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .postCategory {
@@ -64,6 +86,62 @@
   font-size: 10px;
 }
 
+.postTag {
+  font-size: 10px;
+}
+
+.activeFilters,
+.activeFilters > div {
+  display: flex;
+  align-items: center;
+}
+
+.activeFilters {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: var(--content-background);
+  color: var(--sub-text);
+  font-size: 11px;
+}
+
+.activeFilters > div {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.activeFiltersLabel {
+  color: var(--header-color);
+}
+
+.activeFilters strong {
+  color: var(--text-color);
+}
+
+.activeFilters button,
+.emptyPosts button {
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--header-color) 45%, transparent);
+  color: var(--text-color);
+  background: var(--third-background);
+  font: inherit;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.emptyPosts {
+  padding: 42px 24px;
+  text-align: center;
+  background: var(--content-background);
+  color: var(--sub-text);
+  font-size: 13px;
+}
+
+.emptyPosts p {
+  margin: 0 0 18px;
+}
+
 .postCard svg {
   width: 13px;
   height: 13px;
@@ -82,8 +160,18 @@
   letter-spacing: 0.08em;
 }
 
+.loadMoreButton:hover,
+.loadMoreButton:focus-visible {
+  border-color: var(--header-color);
+  color: var(--header-color);
+}
+
 @media (max-width: 640px) {
   .postCard {
     padding: 18px;
+  }
+
+  .activeFilters {
+    align-items: flex-start;
   }
 }

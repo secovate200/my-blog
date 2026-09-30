@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { FiCalendar, FiTag } from "react-icons/fi";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "./style.css";
 
 const POSTS_PER_PAGE = 10;
 const PREVIEW_LENGTH = 250;
 
-const POSTS = [
+// Shared with the category archive so its counts always match the home feed.
+// oxlint-disable-next-line react/only-export-components
+export const POSTS = [
   [
     "Web Security",
     "웹 애플리케이션에서 놓치기 쉬운 접근 제어 취약점",
@@ -113,11 +116,39 @@ function createPostPreview(content) {
     : plainText;
 }
 
-function PostCard({ post }) {
+function PostCard({
+  post,
+  selectedCategory,
+  selectedTag,
+  onCategoryClick,
+  onTagClick,
+}) {
+  const navigate = useNavigate();
+  const openPost = () => navigate(`/post/${post.id}`);
+
   return (
-    <article className="postCard" aria-labelledby={`post-title-${post.id}`}>
+    <article
+      className="postCard"
+      aria-labelledby={`post-title-${post.id}`}
+      role="link"
+      tabIndex={0}
+      onClick={openPost}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") openPost();
+      }}
+    >
       <div className="postCardMeta">
-        <span className="postCategory">{post.category}</span>
+        <button
+          className={`postFilterButton postCategory ${selectedCategory === post.category ? "isActive" : ""}`}
+          type="button"
+          aria-pressed={selectedCategory === post.category}
+          onClick={(event) => {
+            event.stopPropagation();
+            onCategoryClick(post.category);
+          }}
+        >
+          {post.category}
+        </button>
         <span>
           <FiCalendar aria-hidden="true" />
           <time>{post.date}</time>
@@ -130,7 +161,18 @@ function PostCard({ post }) {
       <footer className="postCardFooter">
         <FiTag aria-hidden="true" />
         {post.tags.map((tag) => (
-          <span key={tag}>#{tag}</span>
+          <button
+            className={`postFilterButton postTag ${selectedTag === tag ? "isActive" : ""}`}
+            type="button"
+            aria-pressed={selectedTag === tag}
+            onClick={(event) => {
+              event.stopPropagation();
+              onTagClick(tag);
+            }}
+            key={tag}
+          >
+            #{tag}
+          </button>
         ))}
       </footer>
     </article>
@@ -138,23 +180,88 @@ function PostCard({ post }) {
 }
 
 function Home() {
-  const [visibleCount, setVisibleCount] = useState(POSTS_PER_PAGE);
-  const visiblePosts = POSTS.slice(0, visibleCount);
-  const hasMorePosts = visibleCount < POSTS.length;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [pagination, setPagination] = useState({
+    key: "|",
+    count: POSTS_PER_PAGE,
+  });
+  const selectedCategory = searchParams.get("category") ?? "";
+  const selectedTag = searchParams.get("tag") ?? "";
+  const filterKey = `${selectedCategory}|${selectedTag}`;
+  const visibleCount =
+    pagination.key === filterKey ? pagination.count : POSTS_PER_PAGE;
+  const filteredPosts = POSTS.filter(
+    (post) =>
+      (!selectedCategory || post.category === selectedCategory) &&
+      (!selectedTag || post.tags.includes(selectedTag)),
+  );
+  const visiblePosts = filteredPosts.slice(0, visibleCount);
+  const hasMorePosts = visibleCount < filteredPosts.length;
+
+  const toggleFilter = (key, value) => {
+    setSearchParams((currentParams) => {
+      const nextParams = new URLSearchParams(currentParams);
+
+      if (nextParams.get(key) === value) {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, value);
+      }
+
+      return nextParams;
+    });
+  };
+
+  const clearFilters = () => setSearchParams({});
 
   return (
     <section className="postFeed" aria-label="게시글 목록">
+      {(selectedCategory || selectedTag) && (
+        <div className="activeFilters" aria-live="polite">
+          <div>
+            <span className="activeFiltersLabel">필터</span>
+            {selectedCategory && <span>{selectedCategory}</span>}
+            {selectedTag && <span>#{selectedTag}</span>}
+            <strong>{filteredPosts.length}개의 글</strong>
+          </div>
+          <button type="button" onClick={clearFilters}>
+            전체 보기
+          </button>
+        </div>
+      )}
+
       <div className="postList">
         {visiblePosts.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard
+            key={post.id}
+            post={post}
+            selectedCategory={selectedCategory}
+            selectedTag={selectedTag}
+            onCategoryClick={(category) => toggleFilter("category", category)}
+            onTagClick={(tag) => toggleFilter("tag", tag)}
+          />
         ))}
+
+        {filteredPosts.length === 0 && (
+          <div className="emptyPosts">
+            <p>선택한 조건에 맞는 글이 없습니다.</p>
+            <button type="button" onClick={clearFilters}>
+              필터 초기화
+            </button>
+          </div>
+        )}
       </div>
 
       {hasMorePosts && (
         <button
           className="loadMoreButton"
           type="button"
-          onClick={() => setVisibleCount((count) => count + POSTS_PER_PAGE)}
+          onClick={() =>
+            setPagination({
+              key: filterKey,
+              count: visibleCount + POSTS_PER_PAGE,
+            })
+          }
         >
           Load More
         </button>
