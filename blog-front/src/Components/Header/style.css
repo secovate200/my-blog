@@ -17,3 +17,13 @@
 .headerMenu a:hover {
   color: var(--header-color);
 }
+
+@media (max-width: 640px) {
+  .header {
+    margin: 8px 0;
+  }
+
+  .headerMenu a {
+    font-size: 11px;
+  }
+}

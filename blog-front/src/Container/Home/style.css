@@ -171,7 +171,28 @@
     padding: 18px;
   }
 
+  .postCardMeta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .postCard h2 {
+    margin-top: 12px;
+  }
+
   .activeFilters {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .activeFilters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .activeFilters > button {
+    width: 100%;
   }
 }

@@ -152,4 +152,8 @@
   .contactActions button {
     width: 100%;
   }
+
+  .contactForm textarea {
+    min-height: 150px;
+  }
 }

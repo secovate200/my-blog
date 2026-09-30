@@ -1,0 +1,3 @@
+.heroContent {
+  padding: clamp(28px, 6vw, 50px) 16px;
+}

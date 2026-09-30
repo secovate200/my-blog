@@ -155,13 +155,7 @@ function Project() {
   }
 
   return (
-    <section className="projectArchive" aria-labelledby="project-title">
-      <header className="projectHeader">
-        <span>Works</span>
-        <h1 id="project-title">Projects</h1>
-        <p>진행 중이거나 완성한 프로젝트와 관련 기록을 모았습니다.</p>
-      </header>
-
+    <section className="projectArchive" aria-label="프로젝트 목록">
       <div className="projectGrid">
         {PROJECTS.map((project) => (
           <Link

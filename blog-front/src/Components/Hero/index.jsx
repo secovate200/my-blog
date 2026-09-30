@@ -5,7 +5,7 @@ function Hero() {
   return (
     <div className="hero">
       <Card>
-        <div style={{ padding: "50px 0" }}>
+        <div className="heroContent">
           <Logo />
         </div>
       </Card>

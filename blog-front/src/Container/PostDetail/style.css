@@ -12,6 +12,15 @@
   color: var(--text-color);
 }
 
+.postDetail h1,
+.postDetail h2,
+.postDetail h3,
+.postDetail h4,
+.postDetail h5,
+.postDetail h6 {
+  color: var(--header-color);
+}
+
 .postBackLink,
 .postNotFound a {
   display: inline-flex;
@@ -32,7 +41,8 @@
 .postDetailHeader {
   margin-top: 28px;
   padding-bottom: 24px;
-  border-bottom: 1px solid color-mix(in srgb, var(--header-color) 20%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--header-color) 20%, transparent);
 }
 
 .postDetailMeta,
@@ -50,7 +60,7 @@
 }
 
 .postDetailMeta a {
-  color: var(--header-color);
+  color: var(--sub-text);
   letter-spacing: 0.08em;
   text-decoration: none;
   text-transform: uppercase;
@@ -130,13 +140,12 @@
 
 .postSection h2 {
   margin: 0 0 12px;
-  color: var(--text-color);
   font-size: clamp(18px, 2.4vw, 24px);
 }
 
 .postSection p {
   margin: 0;
-  color: var(--sub-text);
+  color: var(--text-color);
   font-size: 14px;
   line-height: 2;
   word-break: keep-all;
@@ -161,5 +170,28 @@
   .postDetail,
   .postNotFound {
     padding: 20px 18px;
+  }
+
+  .postDetailHeader {
+    margin-top: 22px;
+  }
+
+  .postDetailMeta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .postDetailHeader h1 {
+    font-size: 24px;
+  }
+
+  .postSection p {
+    font-size: 13px;
+    line-height: 1.85;
+  }
+
+  .postTableOfContents {
+    padding: 16px;
   }
 }
