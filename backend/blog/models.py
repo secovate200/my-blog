@@ -177,3 +177,45 @@ class ProjectPost(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class ContactMessage(models.Model):
+    """블로그 방문자가 남긴 문의와 관리자의 이메일 답변을 보관합니다."""
+
+    class Status(models.TextChoices):
+        NEW = "new", "새 문의"
+        IN_PROGRESS = "in_progress", "확인 중"
+        REPLIED = "replied", "답변 완료"
+
+    name = models.CharField("이름", max_length=50)
+    email = models.EmailField("이메일", max_length=254)
+    message = models.TextField("문의 내용", max_length=2000)
+    status = models.CharField(
+        "상태",
+        max_length=20,
+        choices=Status.choices,
+        default=Status.NEW,
+        db_index=True,
+    )
+    reply = models.TextField("답변 내용", max_length=5000, blank=True)
+    replied_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="답변자",
+        related_name="replied_contact_messages",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+    )
+    replied_at = models.DateTimeField("답변일", null=True, blank=True)
+    email_sent_at = models.DateTimeField("메일 발송일", null=True, blank=True)
+    created_at = models.DateTimeField("접수일", auto_now_add=True)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
+
+    class Meta:
+        verbose_name = "문의"
+        verbose_name_plural = "문의"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.name} ({self.email})"

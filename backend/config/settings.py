@@ -31,12 +31,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'blog',
 ]
 
@@ -55,9 +57,12 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
+            'libraries': {
+                'dashboard_tags': 'blog.templatetags.dashboard_tags',
+            },
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -116,6 +121,28 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Django SimpleUI admin theme
+SIMPLEUI_HOME_TITLE = 'My Blog 관리'
+SIMPLEUI_HOME_ICON = 'fas fa-chart-line'
+SIMPLEUI_INDEX = '/'
+SIMPLEUI_HOME_INFO = False
+SIMPLEUI_HOME_QUICK = True
+SIMPLEUI_HOME_ACTION = True
+SIMPLEUI_ANALYSIS = False
+SIMPLEUI_STATIC_OFFLINE = True
+SIMPLEUI_LOGIN_PARTICLES = False
+
+SIMPLEUI_ICON = {
+    '카테고리': 'fas fa-folder-open',
+    '태그': 'fas fa-tags',
+    '게시글': 'fas fa-pen-nib',
+    '프로젝트': 'fas fa-diagram-project',
+    '프로젝트 멤버': 'fas fa-user-shield',
+    '프로젝트 글': 'fas fa-file-lines',
+    '문의': 'fas fa-envelope',
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

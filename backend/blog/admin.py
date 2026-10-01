@@ -5,7 +5,15 @@ from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 
 # 관리자 화면에 등록할 블로그 모델들을 가져옵니다.
-from .models import Category, Post, Project, ProjectMember, ProjectPost, Tag
+from .models import (
+    Category,
+    ContactMessage,
+    Post,
+    Project,
+    ProjectMember,
+    ProjectPost,
+    Tag,
+)
 
 
 # 일반 블로그 데이터는 Superuser만 관리할 수 있도록 공통 권한 클래스를 만듭니다.
@@ -66,6 +74,7 @@ class PostAdmin(SuperuserOnlyAdmin):
         "status",
         "created_at",
     )
+    list_display_links = ("title",)
 
     # 상태, 카테고리, 태그 조건으로 게시글을 필터링합니다.
     list_filter = ("status", "category", "tags")
@@ -78,6 +87,21 @@ class PostAdmin(SuperuserOnlyAdmin):
 
     # 작성자와 생성·수정 시간은 관리자 화면에서 직접 수정하지 못하게 합니다.
     readonly_fields = ("author", "created_at", "updated_at")
+
+    # 입력 항목을 작성 흐름에 맞춰 묶어 편집 화면의 레이아웃을 정돈합니다.
+    fieldsets = (
+        ("기본 정보", {"fields": ("title", ("category", "status"))}),
+        ("콘텐츠", {"fields": ("content", "tags")}),
+        (
+            "작성 정보",
+            {
+                "fields": (("author", "created_at", "updated_at"),),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    list_per_page = 20
 
     # 게시글이 저장되기 직전에 호출되는 메서드를 재정의합니다.
     def save_model(self, request, obj, form, change):
@@ -134,6 +158,7 @@ class ProjectAdmin(admin.ModelAdmin):
         "display_order",
         "created_at",
     )
+    list_display_links = ("title",)
 
     # 공개 여부로 프로젝트 목록을 필터링합니다.
     list_filter = ("is_public",)
@@ -146,6 +171,21 @@ class ProjectAdmin(admin.ModelAdmin):
 
     # 생성일과 수정일은 직접 변경할 수 없게 합니다.
     readonly_fields = ("created_at", "updated_at")
+
+    # 프로젝트 내용, 공개 설정, 시스템 정보를 구분해 배치합니다.
+    fieldsets = (
+        ("프로젝트 정보", {"fields": ("title", "description")}),
+        ("공개 설정", {"fields": (("is_public", "display_order"),)}),
+        (
+            "생성 정보",
+            {
+                "fields": (("created_at", "updated_at"),),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    list_per_page = 20
 
     # Superuser에게만 멤버 관리 Inline을 보여줍니다.
     inlines = (ProjectMemberInline,)
@@ -273,6 +313,14 @@ class ProjectMemberAdmin(SuperuserOnlyAdmin):
     # 권한 부여자와 권한 부여일은 직접 변경하지 못하게 합니다.
     readonly_fields = ("granted_by", "created_at")
 
+    fieldsets = (
+        ("프로젝트 권한", {"fields": (("project", "user"),)}),
+        (
+            "권한 부여 정보",
+            {"fields": (("granted_by", "created_at"),), "classes": ("collapse",)},
+        ),
+    )
+
     # 프로젝트 멤버 권한 저장 직전에 호출되는 메서드를 재정의합니다.
     def save_model(self, request, obj, form, change):
         # 신규 권한이라서 권한 부여자가 없을 때만 현재 사용자를 지정합니다.
@@ -297,6 +345,7 @@ class ProjectPostAdmin(admin.ModelAdmin):
         "is_public",
         "created_at",
     )
+    list_display_links = ("title",)
 
     # 프로젝트와 공개 여부 및 태그로 글을 필터링합니다.
     list_filter = ("project", "is_public", "tags")
@@ -309,6 +358,21 @@ class ProjectPostAdmin(admin.ModelAdmin):
 
     # 작성자와 생성·수정 시간은 직접 변경하지 못하게 합니다.
     readonly_fields = ("author", "created_at", "updated_at")
+
+    # 프로젝트 선택부터 본문 작성까지 자연스러운 순서로 필드를 배치합니다.
+    fieldsets = (
+        ("기본 정보", {"fields": ("project", "title", "is_public")}),
+        ("콘텐츠", {"fields": ("content", "tags")}),
+        (
+            "작성 정보",
+            {
+                "fields": (("author", "created_at", "updated_at"),),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    list_per_page = 20
 
     # 현재 사용자에게 허용된 프로젝트 글만 목록에 표시합니다.
     def get_queryset(self, request):
@@ -407,3 +471,51 @@ class ProjectPostAdmin(admin.ModelAdmin):
 
         # Django의 기본 저장 로직을 실행합니다.
         super().save_model(request, obj, form, change)
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(SuperuserOnlyAdmin):
+    """접수된 문의와 이메일 답변 정보를 관리합니다."""
+
+    list_display = (
+        "id",
+        "name",
+        "email",
+        "status",
+        "created_at",
+        "replied_at",
+    )
+    list_display_links = ("name",)
+    list_filter = ("status", "created_at", "replied_at")
+    search_fields = ("name", "email", "message", "reply")
+    readonly_fields = (
+        "name",
+        "email",
+        "message",
+        "replied_by",
+        "replied_at",
+        "email_sent_at",
+        "created_at",
+        "updated_at",
+    )
+    fieldsets = (
+        ("문의자", {"fields": (("name", "email"),)}),
+        ("문의 내용", {"fields": ("message",)}),
+        ("답변", {"fields": ("status", "reply")}),
+        (
+            "처리 정보",
+            {
+                "fields": (
+                    ("replied_by", "replied_at"),
+                    ("email_sent_at", "created_at", "updated_at"),
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+    ordering = ("-created_at",)
+    list_per_page = 20
+
+    def has_add_permission(self, request):
+        # 문의는 공개 Contact 폼을 통해서만 생성합니다.
+        return False

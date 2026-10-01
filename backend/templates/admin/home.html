@@ -1,0 +1,99 @@
+{% load i18n static simpletags dashboard_tags %}
+{% dashboard_stats as stats %}
+
+<div id="home" class="blog-admin-home">
+    <el-row :gutter="20" class="dashboard-layout">
+        <el-col :xs="24" :sm="24" :md="17" class="dashboard-main">
+            <el-card class="dashboard-card overview-card">
+                <div slot="header" class="dashboard-card-header">
+                    <span><i class="fas fa-layer-group"></i> 콘텐츠 현황</span>
+                    <small>현재 등록된 콘텐츠를 한눈에 확인합니다.</small>
+                </div>
+
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-icon status-icon-primary"><i class="fas fa-pen-nib"></i></span>
+                        <span class="status-copy"><strong>{{ stats.posts }}</strong><small>전체 게시글</small></span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon status-icon-success"><i class="fas fa-diagram-project"></i></span>
+                        <span class="status-copy"><strong>{{ stats.projects }}</strong><small>프로젝트</small></span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon status-icon-warning"><i class="fas fa-file-pen"></i></span>
+                        <span class="status-copy"><strong>{{ stats.draft_posts }}</strong><small>작성 중인 글</small></span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon status-icon-info"><i class="fas fa-tags"></i></span>
+                        <span class="status-copy"><strong>{{ stats.tags }}</strong><small>사용 중인 태그</small></span>
+                    </div>
+                </div>
+            </el-card>
+
+            <el-card class="dashboard-card publish-status-card">
+                <div slot="header" class="dashboard-card-header">
+                    <span><i class="fas fa-circle-check"></i> 공개 상태</span>
+                </div>
+                <div class="publish-summary">
+                    <div><strong>{{ stats.published_posts }}</strong><span>공개 게시글</span></div>
+                    <div><strong>{{ stats.draft_posts }}</strong><span>임시 저장</span></div>
+                    <div><strong>{{ stats.public_projects }}</strong><span>공개 프로젝트</span></div>
+                    <div><strong>{{ stats.project_posts }}</strong><span>프로젝트 글</span></div>
+                    <div><strong>{{ stats.categories }}</strong><span>카테고리</span></div>
+                </div>
+            </el-card>
+
+            {% if "SIMPLEUI_HOME_QUICK"|get_config != False %}
+                <el-card class="dashboard-card quick-management-card">
+                    <div slot="header" class="dashboard-card-header">
+                        <span><i class="fas fa-link"></i> Quick navigation</span>
+                        <small>관리할 항목을 선택하세요.</small>
+                    </div>
+                    <div class="dashboard-quick-grid">
+                        <a
+                            v-for="(c, j) in models"
+                            :key="c.name"
+                            href="javascript:;"
+                            class="dashboard-quick-item"
+                            @click="openTab(c, (j + 1) + '')"
+                        >
+                            <span class="dashboard-quick-icon" :class="c.icon"></span>
+                            <span class="dashboard-quick-name" v-text="c.name"></span>
+                        </a>
+                    </div>
+                </el-card>
+            {% endif %}
+        </el-col>
+
+        {% if "SIMPLEUI_HOME_ACTION"|get_config != False %}
+            <el-col :xs="24" :sm="24" :md="7" class="dashboard-sidebar">
+                <el-card class="dashboard-card action-card">
+                    <div slot="header" class="dashboard-card-header action-heading">
+                        <span><i class="far fa-clock"></i> Recent actions</span>
+                    </div>
+                    {% load log %}
+                    {% get_admin_log 8 as admin_log for_user user %}
+                    {% if admin_log %}
+                        <div class="action-list">
+                            {% for entry in admin_log %}
+                                <article class="action-item">
+                                    <span class="action-marker"></span>
+                                    <div class="action-content">
+                                        <strong v-pre="true">{{ entry }}</strong>
+                                        <span>{{ entry.content_type|default:"관리 작업" }}</span>
+                                        <time>{{ entry.action_time }}</time>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="dashboard-empty">
+                            <i class="far fa-clock"></i>
+                            <p>최근 작업이 없습니다.</p>
+                        </div>
+                    {% endif %}
+                </el-card>
+            </el-col>
+        {% endif %}
+    </el-row>
+</div>
