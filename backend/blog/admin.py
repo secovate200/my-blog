@@ -1,8 +1,11 @@
 # Django 관리자 화면 기능을 가져옵니다.
-from django.contrib import admin
+from django.contrib import admin, messages
 
 # 권한이 없는 프로젝트를 저장하려 할 때 사용할 예외를 가져옵니다.
 from django.core.exceptions import PermissionDenied
+from django.utils import timezone
+
+from .notifications import send_contact_reply
 
 # 관리자 화면에 등록할 블로그 모델들을 가져옵니다.
 from .models import (
@@ -494,6 +497,7 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
         "message",
         "replied_by",
         "replied_at",
+        "receipt_sent_at",
         "email_sent_at",
         "created_at",
         "updated_at",
@@ -507,7 +511,8 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
             {
                 "fields": (
                     ("replied_by", "replied_at"),
-                    ("email_sent_at", "created_at", "updated_at"),
+                    ("receipt_sent_at", "email_sent_at"),
+                    ("created_at", "updated_at"),
                 ),
                 "classes": ("collapse",),
             },
@@ -519,3 +524,32 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
     def has_add_permission(self, request):
         # 문의는 공개 Contact 폼을 통해서만 생성합니다.
         return False
+
+    def save_model(self, request, obj, form, change):
+        should_send = bool(obj.reply.strip()) and (
+            "reply" in form.changed_data or obj.email_sent_at is None
+        )
+        super().save_model(request, obj, form, change)
+
+        if not should_send:
+            return
+
+        if send_contact_reply(obj):
+            sent_at = timezone.now()
+            ContactMessage.objects.filter(pk=obj.pk).update(
+                status=ContactMessage.Status.REPLIED,
+                replied_by=request.user,
+                replied_at=sent_at,
+                email_sent_at=sent_at,
+            )
+            obj.status = ContactMessage.Status.REPLIED
+            obj.replied_by = request.user
+            obj.replied_at = sent_at
+            obj.email_sent_at = sent_at
+            self.message_user(request, "답변 이메일을 전송했습니다.", messages.SUCCESS)
+        else:
+            self.message_user(
+                request,
+                "답변은 저장했지만 이메일 전송에 실패했습니다. SMTP 설정을 확인해 주세요.",
+                messages.WARNING,
+            )

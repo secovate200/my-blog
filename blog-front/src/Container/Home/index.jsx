@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { FiCalendar, FiTag } from "react-icons/fi";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPosts } from "../../api/post";
 import "./style.css";
 
-const POSTS_PER_PAGE = 10;
 const PREVIEW_LENGTH = 250;
 
 function createPostPreview(content = "") {
@@ -68,23 +67,25 @@ function PostCard({
       </div>
       <h2 id={`post-title-${post.id}`}>{post.title}</h2>
       <p className="postExcerpt">{createPostPreview(post.content)}</p>
-      <footer className="postCardFooter">
-        <FiTag aria-hidden="true" />
-        {post.tags.map((tag) => (
-          <button
-            className={`postFilterButton postTag ${selectedTag === tag ? "isActive" : ""}`}
-            type="button"
-            aria-pressed={selectedTag === tag}
-            onClick={(event) => {
-              event.stopPropagation();
-              onTagClick(tag);
-            }}
-            key={tag}
-          >
-            #{tag}
-          </button>
-        ))}
-      </footer>
+      {post.tags.length > 0 && (
+        <footer className="postCardFooter">
+          <FiTag aria-hidden="true" />
+          {post.tags.map((tag) => (
+            <button
+              className={`postFilterButton postTag ${selectedTag === tag ? "isActive" : ""}`}
+              type="button"
+              aria-pressed={selectedTag === tag}
+              onClick={(event) => {
+                event.stopPropagation();
+                onTagClick(tag);
+              }}
+              key={tag}
+            >
+              #{tag}
+            </button>
+          ))}
+        </footer>
+      )}
     </article>
   );
 }
@@ -92,42 +93,63 @@ function PostCard({
 function Home() {
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
-  const [pagination, setPagination] = useState({
-    key: "|",
-    count: POSTS_PER_PAGE,
-  });
+  const [nextPage, setNextPage] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const selectedCategory = searchParams.get("category") ?? "";
+  const selectedTag = searchParams.get("tag") ?? "";
+  const searchQuery = searchParams.get("q")?.trim() ?? "";
 
   useEffect(() => {
     let active = true;
-    getPosts()
-      .then(
-        (data) =>
-          active && setPosts(Array.isArray(data) ? data : (data.results ?? [])),
-      )
+    getPosts({
+      category: selectedCategory,
+      tag: selectedTag,
+      query: searchQuery,
+    })
+      .then((data) => {
+        if (!active) return;
+        setError("");
+        if (Array.isArray(data)) {
+          setPosts(data);
+          setTotalCount(data.length);
+          setNextPage(null);
+          return;
+        }
+        setPosts(data.results ?? []);
+        setTotalCount(data.count ?? 0);
+        setNextPage(data.next ? 2 : null);
+      })
       .catch(() => active && setError("게시글을 불러오지 못했습니다."))
       .finally(() => active && setIsLoading(false));
     return () => {
       active = false;
     };
-  }, []);
+  }, [searchQuery, selectedCategory, selectedTag]);
 
-  const selectedCategory = searchParams.get("category") ?? "";
-  const selectedTag = searchParams.get("tag") ?? "";
-  const filterKey = `${selectedCategory}|${selectedTag}`;
-  const visibleCount =
-    pagination.key === filterKey ? pagination.count : POSTS_PER_PAGE;
-  const filteredPosts = useMemo(
-    () =>
-      posts.filter(
-        (post) =>
-          (!selectedCategory || post.category === selectedCategory) &&
-          (!selectedTag || post.tags.includes(selectedTag)),
-      ),
-    [posts, selectedCategory, selectedTag],
-  );
-  const visiblePosts = filteredPosts.slice(0, visibleCount);
+  const loadMore = async () => {
+    if (!nextPage || isLoadingMore) return;
+    setIsLoadingMore(true);
+    setError("");
+    try {
+      const data = await getPosts({
+        page: nextPage,
+        category: selectedCategory,
+        tag: selectedTag,
+        query: searchQuery,
+      });
+      const nextPosts = Array.isArray(data) ? data : (data.results ?? []);
+      setPosts((currentPosts) => [...currentPosts, ...nextPosts]);
+      setNextPage(!Array.isArray(data) && data.next ? nextPage + 1 : null);
+    } catch {
+      setError("게시글을 더 불러오지 못했습니다.");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const toggleFilter = (key, value) =>
     setSearchParams((currentParams) => {
@@ -156,13 +178,14 @@ function Home() {
 
   return (
     <section className="postFeed" aria-label="게시글 목록">
-      {(selectedCategory || selectedTag) && (
+      {(selectedCategory || selectedTag || searchQuery) && (
         <div className="activeFilters" aria-live="polite">
           <div>
             <span className="activeFiltersLabel">필터</span>
             {selectedCategory && <span>{selectedCategory}</span>}
             {selectedTag && <span>#{selectedTag}</span>}
-            <strong>{filteredPosts.length}개의 글</strong>
+            {searchQuery && <span>“{searchQuery}” 검색</span>}
+            <strong>{totalCount}개의 글</strong>
           </div>
           <button type="button" onClick={() => setSearchParams({})}>
             전체 보기
@@ -170,7 +193,7 @@ function Home() {
         </div>
       )}
       <div className="postList">
-        {visiblePosts.map((post) => (
+        {posts.map((post) => (
           <PostCard
             key={post.id}
             post={post}
@@ -180,24 +203,20 @@ function Home() {
             onTagClick={(tag) => toggleFilter("tag", tag)}
           />
         ))}
-        {filteredPosts.length === 0 && (
+        {posts.length === 0 && (
           <div className="emptyPosts">
             <p>게시글이 없습니다.</p>
           </div>
         )}
       </div>
-      {visibleCount < filteredPosts.length && (
+      {nextPage && (
         <button
           className="loadMoreButton"
           type="button"
-          onClick={() =>
-            setPagination({
-              key: filterKey,
-              count: visibleCount + POSTS_PER_PAGE,
-            })
-          }
+          onClick={loadMore}
+          disabled={isLoadingMore}
         >
-          Load More
+          {isLoadingMore ? "Loading…" : "Load More"}
         </button>
       )}
     </section>

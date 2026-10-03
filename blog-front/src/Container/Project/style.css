@@ -61,6 +61,26 @@
   align-items: center;
 }
 
+.projectTags button,
+.projectPost footer button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
+.projectTags button:hover,
+.projectTags button:focus-visible,
+.projectPost footer button:hover,
+.projectPost footer button:focus-visible,
+.projectTags button.isActive,
+.projectPost footer button.isActive {
+  color: var(--header-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .projectCardTop {
   justify-content: space-between;
   color: var(--header-color);
@@ -128,10 +148,49 @@
   margin-top: 20px;
 }
 
+.projectState {
+  padding: 42px 24px;
+  color: var(--sub-text);
+  background: var(--content-background);
+  text-align: center;
+}
+
+.projectGrid + .projectState {
+  margin-top: 20px;
+}
+
+.projectState p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.projectState button {
+  margin-top: 16px;
+  padding: 9px 14px;
+  border: 1px solid var(--header-color);
+  color: var(--header-color);
+  background: transparent;
+  font: inherit;
+  font-size: 10px;
+}
+
+.projectState button:hover,
+.projectState button:focus-visible {
+  color: var(--content-background);
+  background: var(--header-color);
+}
+
 .projectPost {
   padding: 24px;
+  border: 1px solid transparent;
   color: var(--text-color);
   background: var(--content-background);
+  cursor: pointer;
+}
+
+.projectPost:hover,
+.projectPost:focus-visible {
+  border-color: var(--header-color);
 }
 
 .projectPostMeta {

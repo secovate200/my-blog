@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import "./style.css";
 import { BiMoon, BiSearch, BiSun } from "react-icons/bi";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 function Navbar({ theme, onThemeToggle }) {
   const navbarRef = useRef(null);
   const [isStuck, setIsStuck] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentQuery = new URLSearchParams(location.search).get("q") ?? "";
 
   useEffect(() => {
     const updateStickyState = () => {
@@ -22,6 +25,12 @@ function Navbar({ theme, onThemeToggle }) {
       window.removeEventListener("resize", updateStickyState);
     };
   }, []);
+
+  const submitSearch = (event) => {
+    event.preventDefault();
+    const query = event.currentTarget.elements.searchQuery.value.trim();
+    navigate(query ? `/?q=${encodeURIComponent(query)}` : "/");
+  };
 
   return (
     <div ref={navbarRef} className={`navbar ${isStuck ? "navbarStuck" : ""}`}>
@@ -40,10 +49,17 @@ function Navbar({ theme, onThemeToggle }) {
         </li>
       </ul>
       <div className="search">
-        <form action="" method="get" name="search">
-          <input type="text" placeholder="Search.." />
-          <button>
-            <BiSearch />
+        <form role="search" onSubmit={submitSearch}>
+          <input
+            type="search"
+            name="searchQuery"
+            key={currentQuery}
+            defaultValue={currentQuery}
+            placeholder="Search.."
+            aria-label="게시글 검색어"
+          />
+          <button type="submit" aria-label="게시글 검색">
+            <BiSearch aria-hidden="true" />
           </button>
         </form>
         <button

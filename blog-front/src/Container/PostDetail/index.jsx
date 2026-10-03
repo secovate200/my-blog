@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { FiArrowLeft, FiCalendar, FiTag } from "react-icons/fi";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getPost } from "../../api/post";
+import { getProjectPost } from "../../api/project";
 import Card from "../../Components/UI/Card";
 import "./style.css";
 
@@ -9,46 +10,52 @@ const SECTION_TITLES = ["개요", "핵심 내용", "적용 방법", "점검 체�
 const postCache = new Map();
 const pendingPosts = new Map();
 
-function loadPost(postId) {
-  if (postCache.has(postId)) return Promise.resolve(postCache.get(postId));
-  if (pendingPosts.has(postId)) return pendingPosts.get(postId);
-  const request = getPost(postId).then((post) => {
-    postCache.set(postId, post);
-    pendingPosts.delete(postId);
+function loadPost(cacheKey, requestPost) {
+  if (postCache.has(cacheKey)) return Promise.resolve(postCache.get(cacheKey));
+  if (pendingPosts.has(cacheKey)) return pendingPosts.get(cacheKey);
+  const request = requestPost().then((post) => {
+    postCache.set(cacheKey, post);
+    pendingPosts.delete(cacheKey);
     return post;
   }).catch((error) => {
-    pendingPosts.delete(postId);
+    pendingPosts.delete(cacheKey);
     throw error;
   });
-  pendingPosts.set(postId, request);
+  pendingPosts.set(cacheKey, request);
   return request;
 }
 
-function usePost(postId) {
+function usePost(postId, projectId = null) {
+  const cacheKey = projectId
+    ? `project:${projectId}:post:${postId}`
+    : `post:${postId}`;
   const [result, setResult] = useState(() => ({
-    postId,
-    post: postCache.get(postId) ?? null,
-    isLoading: !postCache.has(postId),
+    cacheKey,
+    post: postCache.get(cacheKey) ?? null,
+    isLoading: !postCache.has(cacheKey),
     error: "",
   }));
 
   useEffect(() => {
     let active = true;
-    loadPost(postId)
-      .then((data) => active && setResult({ postId, post: data, isLoading: false, error: "" }))
+    const requestPost = projectId
+      ? () => getProjectPost(projectId, postId)
+      : () => getPost(postId);
+    loadPost(cacheKey, requestPost)
+      .then((data) => active && setResult({ cacheKey, post: data, isLoading: false, error: "" }))
       .catch(() => active && setResult({
-        postId,
+        cacheKey,
         post: null,
         isLoading: false,
         error: "게시글을 찾을 수 없습니다.",
       }));
     return () => { active = false; };
-  }, [postId]);
+  }, [cacheKey, postId, projectId]);
 
-  if (result.postId !== postId) {
+  if (result.cacheKey !== cacheKey) {
     return {
-      post: postCache.get(postId) ?? null,
-      isLoading: !postCache.has(postId),
+      post: postCache.get(cacheKey) ?? null,
+      isLoading: !postCache.has(cacheKey),
       error: "",
     };
   }
@@ -74,8 +81,8 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
 }
 
-export function PostTableOfContents({ postId }) {
-  const { post } = usePost(postId);
+export function PostTableOfContents({ postId, projectId = null }) {
+  const { post } = usePost(postId, projectId);
   if (!post) return null;
   return (
     <nav className="postTableOfContents" aria-label="목차"><strong>목차</strong><ol>
@@ -86,29 +93,50 @@ export function PostTableOfContents({ postId }) {
   );
 }
 
-function PostDetail() {
-  const { postId } = useParams();
-  const { post, isLoading, error } = usePost(postId);
+function PostDetail({ isProjectPost = false }) {
+  const { projectId, postId } = useParams();
+  const [searchParams] = useSearchParams();
+  const selectedTag = searchParams.get("tag") ?? "";
+  const { post, isLoading, error } = usePost(
+    postId,
+    isProjectPost ? projectId : null,
+  );
+  const listUrl = isProjectPost
+    ? `/project?project=${projectId}${
+        selectedTag ? `&tag=${encodeURIComponent(selectedTag)}` : ""
+      }`
+    : "/";
+  const listLabel = isProjectPost ? "프로젝트 글 목록" : "게시글 목록";
 
   if (isLoading) return <Card><section className="postNotFound"><p>게시글을 불러오는 중입니다.</p></section></Card>;
   if (error || !post) return (
     <Card><section className="postNotFound"><span>404</span><h1>{error}</h1>
-      <Link to="/"><FiArrowLeft aria-hidden="true" />게시글 목록</Link></section></Card>
+      <Link to={listUrl}><FiArrowLeft aria-hidden="true" />{listLabel}</Link></section></Card>
   );
 
   return (
     <div className="postDetailLayout"><Card>
       <article className="postDetail" aria-labelledby="post-detail-title">
-        <Link className="postBackLink" to="/"><FiArrowLeft aria-hidden="true" />게시글 목록</Link>
+        <Link className="postBackLink" to={listUrl}><FiArrowLeft aria-hidden="true" />{listLabel}</Link>
         <header className="postDetailHeader">
           <div className="postDetailMeta">
-            <Link to={`/?category=${encodeURIComponent(post.category)}`}>{post.category}</Link>
+            {isProjectPost ? (
+              <Link to={listUrl}>{post.project_title}</Link>
+            ) : (
+              <Link to={`/?category=${encodeURIComponent(post.category)}`}>{post.category}</Link>
+            )}
             <time dateTime={post.created_at}><FiCalendar aria-hidden="true" />{formatDate(post.created_at)}</time>
           </div>
           <h1 id="post-detail-title">{post.title}</h1>
-          <div className="postDetailTags"><FiTag aria-hidden="true" />
-            {post.tags.map((tag) => <Link to={`/?tag=${encodeURIComponent(tag)}`} key={tag}>#{tag}</Link>)}
-          </div>
+          {post.tags.length > 0 && (
+            <div className="postDetailTags"><FiTag aria-hidden="true" />
+              {post.tags.map((tag) => (
+                isProjectPost
+                  ? <span key={tag}>#{tag}</span>
+                  : <Link to={`/?tag=${encodeURIComponent(tag)}`} key={tag}>#{tag}</Link>
+              ))}
+            </div>
+          )}
         </header>
         <div className="postDetailBody">
           {createPostSections(post.content).map((section) => (
@@ -120,6 +148,10 @@ function PostDetail() {
       </article>
     </Card></div>
   );
+}
+
+export function ProjectPostDetail() {
+  return <PostDetail isProjectPost />;
 }
 
 export default PostDetail;

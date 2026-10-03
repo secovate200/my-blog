@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiFolder, FiTag } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { getPosts } from "../../api/post";
+import { getAllPosts } from "../../api/post";
 import Card from "../../Components/UI/Card";
 import "./style.css";
 
@@ -18,8 +18,8 @@ function Category() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getPosts()
-      .then((data) => setPosts(Array.isArray(data) ? data : (data.results ?? [])))
+    getAllPosts()
+      .then(setPosts)
       .catch(() => setError("카테고리 정보를 불러오지 못했습니다."));
   }, []);
 
@@ -40,16 +40,18 @@ function Category() {
             ))}
           </div>
         </div>
-        <div className="taxonomySection">
-          <h2><FiTag aria-hidden="true" />Tags</h2>
-          <div className="tagCloud">
-            {tags.map(({ name, count }) => (
-              <Link className="taxonomyItem tagItem" to={`/?tag=${encodeURIComponent(name)}`} key={name}>
-                <span>#{name}</span><strong aria-label={`${count}개의 글`}>{count}</strong>
-              </Link>
-            ))}
+        {tags.length > 0 && (
+          <div className="taxonomySection">
+            <h2><FiTag aria-hidden="true" />Tags</h2>
+            <div className="tagCloud">
+              {tags.map(({ name, count }) => (
+                <Link className="taxonomyItem tagItem" to={`/?tag=${encodeURIComponent(name)}`} key={name}>
+                  <span>#{name}</span><strong aria-label={`${count}개의 글`}>{count}</strong>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </section>
     </Card>
   );

@@ -208,6 +208,7 @@ class ContactMessage(models.Model):
         editable=False,
     )
     replied_at = models.DateTimeField("답변일", null=True, blank=True)
+    receipt_sent_at = models.DateTimeField("접수 메일 발송일", null=True, blank=True)
     email_sent_at = models.DateTimeField("메일 발송일", null=True, blank=True)
     created_at = models.DateTimeField("접수일", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)

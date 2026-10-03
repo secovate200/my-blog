@@ -6,6 +6,15 @@ from blog.models import Category, Post, Project, ProjectMember, ProjectPost, Tag
 
 
 POSTS = (
+    *(
+        (
+            "Pagination Test",
+            str(number),
+            f"Load More 페이지네이션 동작을 확인하기 위한 {number}번 테스트 게시글입니다.",
+            ("Pagination",),
+        )
+        for number in range(1, 21)
+    ),
     (
         "Web Security",
         "접근 제어 취약점을 점검하는 실전 체크리스트",

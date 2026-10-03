@@ -1,15 +1,37 @@
 import { useState } from "react";
 import { FiMail, FiSend, FiUser } from "react-icons/fi";
+import { createContactMessage } from "../../api/contact";
 import Card from "../../Components/UI/Card";
 import "./style.css";
 
 function Contact() {
-  const [isChecked, setIsChecked] = useState(false);
+  const [status, setStatus] = useState("idle");
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsChecked(true);
+    setStatus("submitting");
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    try {
+      await createContactMessage({
+        name: formData.get("name"),
+        email: formData.get("email"),
+        message: formData.get("message"),
+      });
+      form.reset();
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
   };
+
+  const statusMessage = {
+    idle: "모든 항목은 필수입니다.",
+    submitting: "메시지를 보내는 중입니다…",
+    success: "메시지가 접수되었습니다. 감사합니다.",
+    error: "전송하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  }[status];
 
   return (
     <Card>
@@ -23,7 +45,7 @@ function Contact() {
         <form
           className="contactForm"
           onSubmit={handleSubmit}
-          onInput={() => setIsChecked(false)}
+          onInput={() => status !== "submitting" && setStatus("idle")}
         >
           <div className="contactFields">
             <div className="formField">
@@ -73,11 +95,11 @@ function Contact() {
 
           <div className="contactActions">
             <p className="formStatus" aria-live="polite">
-              {isChecked ? "입력 내용을 확인했습니다." : "모든 항목은 필수입니다."}
+              {statusMessage}
             </p>
-            <button type="submit">
+            <button type="submit" disabled={status === "submitting"}>
               <FiSend aria-hidden="true" />
-              보내기
+              {status === "submitting" ? "보내는 중" : "보내기"}
             </button>
           </div>
         </form>

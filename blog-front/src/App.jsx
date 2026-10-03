@@ -3,7 +3,10 @@ import Home from "./Container/Home";
 import Category from "./Container/Category";
 import Project from "./Container/Project";
 import Contact from "./Container/Contact";
-import PostDetail, { PostTableOfContents } from "./Container/PostDetail";
+import PostDetail, {
+  PostTableOfContents,
+  ProjectPostDetail,
+} from "./Container/PostDetail";
 import Header from "./Components/Header";
 import Hero from "./Components/Hero";
 import Navbar from "./Components/Navbar";
@@ -15,6 +18,9 @@ function App() {
   const [theme, setTheme] = useState("light");
   const location = useLocation();
   const postMatch = location.pathname.match(/^\/post\/(\d+)\/?$/);
+  const projectPostMatch = location.pathname.match(
+    /^\/project\/(\d+)\/post\/(\d+)\/?$/,
+  );
   const errorMatch = window.location.pathname.match(/^\/error\/(\d{3})\/?$/);
   const errorStatus = errorMatch ? Number(errorMatch[1]) : null;
 
@@ -46,11 +52,21 @@ function App() {
             <Route path="/post/:postId" element={<PostDetail />} />
             <Route path="/category" element={<Category />} />
             <Route path="/project" element={<Project />} />
+            <Route
+              path="/project/:projectId/post/:postId"
+              element={<ProjectPostDetail />}
+            />
             <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>
         <aside className="profile">
           {postMatch && <PostTableOfContents postId={postMatch[1]} />}
+          {projectPostMatch && (
+            <PostTableOfContents
+              projectId={projectPostMatch[1]}
+              postId={projectPostMatch[2]}
+            />
+          )}
           <Profile />
         </aside>
       </div>
