@@ -1,12 +1,97 @@
 from django.contrib.auth import get_user_model
+import tempfile
 from unittest.mock import patch
 
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from .models import Category, ContactMessage, Post, Project, ProjectPost, Tag
+from .content import sanitize_content
+from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectPost, Tag
 from .notifications import send_contact_receipt, send_contact_reply
+
+
+class RichContentTests(TestCase):
+    def test_allowed_notion_blocks_are_preserved(self):
+        content = (
+            '{"time":1,"version":"2.31.7","blocks":['
+            '{"type":"header","data":{"text":"제목","level":2}},'
+            '{"type":"paragraph","data":{"text":"<b>본문</b>"}},'
+            '{"type":"code","data":{"code":"alert(1)"}}]}'
+        )
+
+        sanitized = sanitize_content(content)
+
+        self.assertIn('"type":"header"', sanitized)
+        self.assertIn('"text":"<b>본문</b>"', sanitized)
+        self.assertIn('"code":"alert(1)"', sanitized)
+
+    def test_all_six_heading_levels_are_preserved(self):
+        for level in range(1, 7):
+            content = (
+                '{"blocks":[{"type":"header","data":'
+                f'{{"text":"제목 {level}","level":{level}}}}}]}}'
+            )
+
+            self.assertIn(f'"level":{level}', sanitize_content(content))
+
+    def test_quote_trailing_empty_lines_are_removed(self):
+        content = (
+            '{"blocks":[{"type":"quote","data":'
+            '{"text":"너 자신을 알라<br><br><br>","caption":"<br>","alignment":"left"}}]}'
+        )
+
+        sanitized = sanitize_content(content)
+
+        self.assertIn('"text":"너 자신을 알라"', sanitized)
+        self.assertIn('"caption":""', sanitized)
+
+    def test_unsafe_html_and_link_attributes_are_removed(self):
+        content = (
+            '{"blocks":[{"type":"paragraph","data":{"text":'
+            '"<script>alert(1)</script><a href=\\"javascript:alert(2)\\" '
+            'onclick=\\"alert(3)\\">링크</a>"}}]}'
+        )
+
+        sanitized = sanitize_content(content)
+
+        self.assertNotIn("onclick", sanitized)
+        self.assertNotIn("<script", sanitized)
+        self.assertNotIn("javascript:", sanitized)
+        self.assertNotIn("onclick", sanitized)
+        self.assertIn("alert(1)<a>링크</a>", sanitized)
+
+
+class BlogAssetTests(TestCase):
+    def test_anonymous_user_cannot_upload(self):
+        response = self.client.post(
+            reverse("blog:asset-upload"),
+            {"file": SimpleUploadedFile("test.png", b"image", content_type="image/png")},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(BlogAsset.objects.count(), 0)
+
+    def test_admin_can_upload_and_download_attachment(self):
+        user = get_user_model().objects.create_superuser(
+            username="asset-admin", email="asset@example.com", password="password"
+        )
+        self.client.force_login(user)
+
+        with tempfile.TemporaryDirectory() as media_root:
+            with self.settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    reverse("blog:asset-upload"),
+                    {"file": SimpleUploadedFile("guide.pdf", b"pdf-data", content_type="application/pdf")},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["success"], 1)
+                asset = BlogAsset.objects.get()
+                download = self.client.get(reverse("blog:asset-download", args=[asset.pk]))
+                self.assertEqual(download.status_code, 200)
+                self.assertIn("attachment", download["Content-Disposition"])
 
 
 class PostPaginationTests(TestCase):
@@ -200,6 +285,30 @@ class ContactMessageTests(TestCase):
         self.assertTrue(response.json()["notification_sent"])
         self.assertTrue(response.json()["receipt_sent"])
         self.assertEqual(ContactMessage.objects.count(), 1)
+        notify.assert_called_once_with(ContactMessage.objects.get())
+        receipt.assert_called_once_with(ContactMessage.objects.get())
+
+    @patch("blog.views.send_contact_notification", return_value=True)
+    @patch("blog.views.send_contact_receipt", return_value=True)
+    def test_logged_in_admin_can_submit_without_csrf_token(self, receipt, notify):
+        user = get_user_model().objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="password",
+        )
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("blog:contact-create"),
+            {
+                "name": "관리자",
+                "email": "admin@example.com",
+                "message": "로그인 상태에서 보낸 문의입니다.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
         notify.assert_called_once_with(ContactMessage.objects.get())
         receipt.assert_called_once_with(ContactMessage.objects.get())
 

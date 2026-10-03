@@ -147,6 +147,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Django SimpleUI admin theme
 SIMPLEUI_HOME_TITLE = 'My Blog 관리'

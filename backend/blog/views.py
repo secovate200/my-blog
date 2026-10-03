@@ -1,10 +1,18 @@
+from pathlib import Path
+
 from django.db.models import Count, Prefetch, Q
+from django.http import FileResponse, Http404
+from django.urls import reverse
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.views import APIView
 from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
-from .models import Post, Project, ProjectPost
+from .models import BlogAsset, Post, Project, ProjectPost
 from .notifications import send_contact_notification, send_contact_receipt
 from .serializer import (
     ContactMessageSerializer,
@@ -17,6 +25,74 @@ from .serializer import (
 
 class PostPagination(PageNumberPagination):
     page_size = 10
+
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
+ALLOWED_FILE_EXTENSIONS = {".pdf", ".txt", ".md", ".csv", ".json", ".zip", ".docx", ".xlsx", ".pptx"}
+
+
+class BlogAssetUploadAPIView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        uploaded = request.FILES.get("file")
+        if not uploaded:
+            return Response({"success": 0, "message": "파일을 선택해 주세요."}, status=400)
+
+        extension = Path(uploaded.name).suffix.lower()
+        is_image = uploaded.content_type in ALLOWED_IMAGE_TYPES and extension in {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+        if not is_image and extension not in ALLOWED_FILE_EXTENSIONS:
+            return Response({"success": 0, "message": "허용되지 않는 파일 형식입니다."}, status=400)
+
+        limit = 8 * 1024 * 1024 if is_image else 20 * 1024 * 1024
+        if uploaded.size > limit:
+            return Response({"success": 0, "message": "파일 크기 제한을 초과했습니다."}, status=400)
+
+        asset = BlogAsset.objects.create(
+            file=uploaded,
+            original_name=Path(uploaded.name).name[:255],
+            content_type=uploaded.content_type or "application/octet-stream",
+            size=uploaded.size,
+            kind=BlogAsset.Kind.IMAGE if is_image else BlogAsset.Kind.FILE,
+            uploaded_by=request.user,
+        )
+        route = "blog:asset-content" if is_image else "blog:asset-download"
+        url = request.build_absolute_uri(reverse(route, args=[asset.pk]))
+        return Response({
+            "success": 1,
+            "file": {
+                "url": url,
+                "name": asset.original_name,
+                "size": asset.size,
+                "extension": extension.lstrip("."),
+            },
+        })
+
+
+class BlogAssetContentAPIView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk, download=False):
+        try:
+            asset = BlogAsset.objects.get(pk=pk)
+        except BlogAsset.DoesNotExist as error:
+            raise Http404 from error
+        response = FileResponse(
+            asset.file.open("rb"),
+            as_attachment=download or asset.kind == BlogAsset.Kind.FILE,
+            filename=asset.original_name,
+            content_type=asset.content_type,
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
+
+
+class BlogAssetDownloadAPIView(BlogAssetContentAPIView):
+    def get(self, request, pk):
+        return super().get(request, pk, download=True)
 
 
 class PostListApiView(ListAPIView):
@@ -135,6 +211,8 @@ class ProjectPostDetailAPIView(RetrieveAPIView):
 
 class ContactMessageCreateAPIView(CreateAPIView):
     serializer_class = ContactMessageSerializer
+    authentication_classes = []
+    permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "contact"
 

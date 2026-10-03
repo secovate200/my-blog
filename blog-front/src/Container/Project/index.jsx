@@ -9,18 +9,13 @@ import {
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { getProject, getProjects } from "../../api/project";
 import Card from "../../Components/UI/Card";
+import { contentToPlainText } from "../../utils/content";
 import "./style.css";
 
 const PREVIEW_LENGTH = 180;
 
 function createPreview(content = "") {
-  const plainText = content
-    .replace(/<[^>]*>/g, " ")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/[`#>*_~]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const plainText = contentToPlainText(content);
 
   return plainText.length > PREVIEW_LENGTH
     ? `${plainText.slice(0, PREVIEW_LENGTH)}…`

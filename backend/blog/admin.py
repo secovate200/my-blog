@@ -5,10 +5,12 @@ from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 
+from .forms import PostAdminForm, ProjectPostAdminForm
 from .notifications import send_contact_reply
 
 # 관리자 화면에 등록할 블로그 모델들을 가져옵니다.
 from .models import (
+    BlogAsset,
     Category,
     ContactMessage,
     Post,
@@ -42,6 +44,29 @@ class SuperuserOnlyAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
 
+@admin.register(BlogAsset)
+class BlogAssetAdmin(SuperuserOnlyAdmin):
+    list_display = ("original_name", "kind", "size", "uploaded_by", "created_at")
+    list_filter = ("kind", "created_at")
+    search_fields = ("original_name", "uploaded_by__username")
+    readonly_fields = (
+        "id",
+        "file",
+        "original_name",
+        "content_type",
+        "size",
+        "kind",
+        "uploaded_by",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 # Category 모델을 Django 관리자 화면에 등록합니다.
 @admin.register(Category)
 # Category 관리자 화면 설정을 정의합니다.
@@ -68,6 +93,7 @@ class TagAdmin(SuperuserOnlyAdmin):
 @admin.register(Post)
 # 일반 블로그 게시글 관리자 화면을 정의합니다.
 class PostAdmin(SuperuserOnlyAdmin):
+    form = PostAdminForm
     # 게시글 목록에 자주 확인할 필드들을 표시합니다.
     list_display = (
         "id",
@@ -339,6 +365,7 @@ class ProjectMemberAdmin(SuperuserOnlyAdmin):
 @admin.register(ProjectPost)
 # 프로젝트별 권한을 적용하는 프로젝트 글 관리자 화면을 정의합니다.
 class ProjectPostAdmin(admin.ModelAdmin):
+    form = ProjectPostAdminForm
     # 프로젝트 글 목록에 관리에 필요한 필드들을 표시합니다.
     list_display = (
         "id",

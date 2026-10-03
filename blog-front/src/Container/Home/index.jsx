@@ -2,18 +2,13 @@ import { useEffect, useState } from "react";
 import { FiCalendar, FiTag } from "react-icons/fi";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getPosts } from "../../api/post";
+import { contentToPlainText } from "../../utils/content";
 import "./style.css";
 
 const PREVIEW_LENGTH = 250;
 
 function createPostPreview(content = "") {
-  const plainText = content
-    .replace(/<[^>]*>/g, " ")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    .replace(/[`#>*_~]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const plainText = contentToPlainText(content);
 
   return plainText.length > PREVIEW_LENGTH
     ? `${plainText.slice(0, PREVIEW_LENGTH)}…`

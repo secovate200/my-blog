@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiArrowLeft, FiCalendar, FiTag } from "react-icons/fi";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getPost } from "../../api/post";
 import { getProjectPost } from "../../api/project";
 import Card from "../../Components/UI/Card";
+import { parseEditorContent } from "../../utils/content";
 import "./style.css";
 
 const SECTION_TITLES = ["개요", "핵심 내용", "적용 방법", "점검 체크리스트"];
@@ -76,6 +77,109 @@ function createPostSections(content = "") {
   }, []);
 }
 
+function isRichContent(content = "") {
+  return /<(?:p|h[2-4]|ul|ol|li|blockquote|pre|code|hr|br)\b/i.test(content);
+}
+
+function prepareRichContent(content = "") {
+  const editorData = parseEditorContent(content);
+  if (editorData) {
+    const headings = editorData.blocks
+      .filter((block) => block.type === "header")
+      .map((block, index) => ({
+        id: `section-${index + 1}`,
+        title: block.data.text.replace(/<[^>]*>/g, "").trim() || `섹션 ${index + 1}`,
+      }));
+    return { blocks: editorData.blocks, headings };
+  }
+  if (!isRichContent(content)) return null;
+
+  const document = new DOMParser().parseFromString(content, "text/html");
+  const headings = Array.from(document.body.querySelectorAll("h2, h3, h4")).map(
+    (heading, index) => {
+      const id = `section-${index + 1}`;
+      heading.id = id;
+      return { id, title: heading.textContent?.trim() || `섹션 ${index + 1}` };
+    },
+  );
+
+  return { headings, html: document.body.innerHTML };
+}
+
+function InlineContent({ html }) {
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function trimEmptyLines(html = "") {
+  return html.replace(/^(?:\s*<br\s*\/?>(?:\s*))+|(?:(?:\s*)<br\s*\/?>\s*)+$/gi, "");
+}
+
+function EditorList({ items = [], ordered = false }) {
+  const ListTag = ordered ? "ol" : "ul";
+  return (
+    <ListTag>
+      {items.map((item, index) => {
+        const data = typeof item === "string" ? { content: item, items: [] } : item;
+        return (
+          <li key={index}>
+            <InlineContent html={data.content ?? ""} />
+            {data.items?.length > 0 && <EditorList items={data.items} ordered={ordered} />}
+          </li>
+        );
+      })}
+    </ListTag>
+  );
+}
+
+function EditorBlocks({ blocks }) {
+  let headingIndex = 0;
+  return blocks.map((block, index) => {
+    const { data = {} } = block;
+    if (block.type === "header") {
+      headingIndex += 1;
+      const HeadingTag = `h${data.level ?? 2}`;
+      return <HeadingTag id={`section-${headingIndex}`} key={index}><InlineContent html={data.text} /></HeadingTag>;
+    }
+    if (block.type === "paragraph") return <p key={index}><InlineContent html={data.text} /></p>;
+    if (block.type === "list") return <EditorList items={data.items} ordered={data.style === "ordered"} key={index} />;
+    if (block.type === "quote") {
+      const text = trimEmptyLines(data.text);
+      const caption = trimEmptyLines(data.caption);
+      return (
+        <blockquote key={index}>
+          <p><InlineContent html={text} /></p>
+          {caption && <cite><InlineContent html={caption} /></cite>}
+        </blockquote>
+      );
+    }
+    if (block.type === "code") return <pre key={index}><code>{data.code}</code></pre>;
+    if (block.type === "delimiter") return <hr key={index} />;
+    if (block.type === "image") return (
+      <figure className={`postImage${data.withBorder ? " withBorder" : ""}${data.withBackground ? " withBackground" : ""}`} key={index}>
+        <img src={data.file?.url} alt={data.caption?.replace(/<[^>]*>/g, "") || "게시글 이미지"} loading="lazy" />
+        {data.caption && <figcaption><InlineContent html={data.caption} /></figcaption>}
+      </figure>
+    );
+    if (block.type === "attaches") return (
+      <a className="postAttachment" href={data.file?.url} key={index}>
+        <span className="postAttachmentExtension">{data.file?.extension || "FILE"}</span>
+        <span>
+          <strong>{data.title || data.file?.name || "첨부파일"}</strong>
+          <small>{formatFileSize(data.file?.size)}</small>
+        </span>
+        <span aria-hidden="true">↓</span>
+      </a>
+    );
+    return null;
+  });
+}
+
+function formatFileSize(size = 0) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function formatDate(value) {
   if (!value) return "";
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
@@ -83,10 +187,16 @@ function formatDate(value) {
 
 export function PostTableOfContents({ postId, projectId = null }) {
   const { post } = usePost(postId, projectId);
+  const richContent = useMemo(
+    () => prepareRichContent(post?.content),
+    [post?.content],
+  );
   if (!post) return null;
+  const sections = richContent?.headings ?? createPostSections(post.content);
+  if (sections.length === 0) return null;
   return (
     <nav className="postTableOfContents" aria-label="목차"><strong>목차</strong><ol>
-      {createPostSections(post.content).map((section) => (
+      {sections.map((section) => (
         <li key={section.id}><a href={`#${section.id}`}>{section.title}</a></li>
       ))}
     </ol></nav>
@@ -107,6 +217,10 @@ function PostDetail({ isProjectPost = false }) {
       }`
     : "/";
   const listLabel = isProjectPost ? "프로젝트 글 목록" : "게시글 목록";
+  const richContent = useMemo(
+    () => prepareRichContent(post?.content),
+    [post?.content],
+  );
 
   if (isLoading) return <Card><section className="postNotFound"><p>게시글을 불러오는 중입니다.</p></section></Card>;
   if (error || !post) return (
@@ -138,13 +252,26 @@ function PostDetail({ isProjectPost = false }) {
             </div>
           )}
         </header>
-        <div className="postDetailBody">
-          {createPostSections(post.content).map((section) => (
-            <section id={section.id} className="postSection" key={section.id}>
-              <h2>{section.title}</h2><p>{section.content}</p>
-            </section>
-          ))}
-        </div>
+        {richContent ? (
+          richContent.blocks ? (
+            <div className="postDetailBody postRichContent">
+              <EditorBlocks blocks={richContent.blocks} />
+            </div>
+          ) : (
+            <div
+              className="postDetailBody postRichContent"
+              dangerouslySetInnerHTML={{ __html: richContent.html }}
+            />
+          )
+        ) : (
+          <div className="postDetailBody">
+            {createPostSections(post.content).map((section) => (
+              <section id={section.id} className="postSection" key={section.id}>
+                <h2>{section.title}</h2><p>{section.content}</p>
+              </section>
+            ))}
+          </div>
+        )}
       </article>
     </Card></div>
   );

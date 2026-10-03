@@ -1,5 +1,11 @@
 from django.conf import settings
 from django.db import models
+import uuid
+
+
+def asset_upload_path(instance, filename):
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"blog-assets/{instance.id}.{extension}"
 
 
 class Category(models.Model):
@@ -28,6 +34,34 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class BlogAsset(models.Model):
+    class Kind(models.TextChoices):
+        IMAGE = "image", "이미지"
+        FILE = "file", "첨부파일"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.FileField("파일", upload_to=asset_upload_path)
+    original_name = models.CharField("원본 파일명", max_length=255)
+    content_type = models.CharField("MIME 유형", max_length=100)
+    size = models.PositiveBigIntegerField("크기")
+    kind = models.CharField("종류", max_length=10, choices=Kind.choices)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="업로더",
+        on_delete=models.PROTECT,
+        related_name="blog_assets",
+    )
+    created_at = models.DateTimeField("업로드일", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "게시글 파일"
+        verbose_name_plural = "게시글 파일"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.original_name
 
 
 class Post(models.Model):

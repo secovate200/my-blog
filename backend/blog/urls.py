@@ -1,6 +1,9 @@
 from django.urls import path
 
 from .views import (
+    BlogAssetContentAPIView,
+    BlogAssetDownloadAPIView,
+    BlogAssetUploadAPIView,
     ContactMessageCreateAPIView,
     PostDetailAPIView,
     PostListApiView,
@@ -13,6 +16,9 @@ from .views import (
 app_name = "blog"
 
 urlpatterns = [
+    path("assets/upload/", BlogAssetUploadAPIView.as_view(), name="asset-upload"),
+    path("assets/<uuid:pk>/content/", BlogAssetContentAPIView.as_view(), name="asset-content"),
+    path("assets/<uuid:pk>/download/", BlogAssetDownloadAPIView.as_view(), name="asset-download"),
     path("posts/", PostListApiView.as_view(), name="post-list"),
     path("posts/<int:pk>/", PostDetailAPIView.as_view(), name="post-detail"),
     path("projects/", ProjectListAPIView.as_view(), name="project-list"),
