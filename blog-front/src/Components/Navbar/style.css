@@ -1,10 +1,12 @@
 .navbar {
+  width: 100%;
   padding: 10px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: sticky;
   top: 0;
+  align-self: flex-start;
   z-index: 10;
   background-color: var(--content-background);
 }
@@ -122,4 +124,48 @@
 .themeToggle svg {
   width: 17px;
   height: 17px;
+}
+
+@media (max-width: 760px) {
+  .navbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .navbarMenu {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .navbar ul li {
+    flex: 1 0 auto;
+    text-align: center;
+  }
+
+  .navbar ul li a {
+    padding-inline: 8px;
+    font-size: 13px;
+  }
+
+  .search {
+    width: 100%;
+    margin: 0;
+  }
+
+  .search form {
+    flex: 1;
+  }
+
+  .search input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .navbar ul li a {
+    font-size: 12px;
+  }
 }

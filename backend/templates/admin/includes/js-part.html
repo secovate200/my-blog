@@ -1,0 +1,61 @@
+{% load static simpletags %}
+<script type="text/javascript" src="{% static 'admin/simpleui-x/js/vue.min.js' %}?_={% get_version %}"></script>
+<script type="text/javascript" src="{% static 'admin/simpleui-x/elementui/index.js' %}?_={% get_version %}"></script>
+<script type="text/javascript" src="{% static 'admin/simpleui-x/elementui/umd/locale/en.js' %}?_={% get_version %}"></script>
+<script type="text/javascript">
+    const LANGUAGE_CODE = '{{ 'LANGUAGE_CODE'|get_config }}';
+    if (LANGUAGE_CODE.split('-')[0] !== 'zh') {
+        ELEMENT.locale(ELEMENT.lang.en);
+    }
+
+    function clearAdminRouteHash(event) {
+        if (window.top === window.self && window.location.hash) {
+            window.history.replaceState(
+                window.history.state,
+                document.title,
+                window.location.pathname + window.location.search
+            );
+
+            if (event) {
+                event.stopImmediatePropagation();
+            }
+        }
+    }
+
+    // The header Home tab writes "#/". SimpleUI can mistake that value for
+    // the first model URL on reload, so normalize it before its own hash
+    // listener runs.
+    function normalizeAdminHomeHash(event) {
+        if (window.location.hash === '#/') {
+            clearAdminRouteHash(event);
+        }
+    }
+
+    normalizeAdminHomeHash();
+    window.addEventListener('hashchange', normalizeAdminHomeHash);
+
+    // The sidebar Home item has no URL. SimpleUI therefore changes the
+    // visible tab but leaves the previous model hash in the address bar,
+    // causing that model page to return after F5. Wrap its menu handler once
+    // the SimpleUI app has been created and clear the stale route.
+    window.addEventListener('DOMContentLoaded', function () {
+        if (!window.app || window.app.__adminHomeHashFixed) {
+            return;
+        }
+
+        const openTab = window.app.openTab;
+        window.app.openTab = function (data) {
+            const result = openTab.apply(this, arguments);
+
+            if (data && String(data.id) === '0') {
+                clearAdminRouteHash();
+            }
+
+            return result;
+        };
+        window.app.__adminHomeHashFixed = true;
+    });
+
+    // The admin uses one managed theme. Remove choices saved by older sessions.
+    document.cookie = 'theme=; Max-Age=0; Path=/; SameSite=Lax';
+</script>

@@ -134,6 +134,11 @@
   background: transparent;
 }
 
+.contactActions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 @media (max-width: 640px) {
   .contact {
     padding: 20px 18px;
@@ -151,5 +156,9 @@
 
   .contactActions button {
     width: 100%;
+  }
+
+  .contactForm textarea {
+    min-height: 150px;
   }
 }

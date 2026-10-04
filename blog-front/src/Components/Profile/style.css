@@ -98,4 +98,20 @@
   .profileLogoFrame {
     width: 104px;
   }
+
+  .profileBio {
+    max-width: 340px;
+  }
+}
+
+@media (max-width: 380px) {
+  .profileLinks {
+    grid-template-columns: 1fr;
+  }
+
+  .profileLinks a + a {
+    border-top: 1px solid
+      color-mix(in srgb, var(--header-color) 35%, transparent);
+    border-left: 0;
+  }
 }

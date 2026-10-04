@@ -5,6 +5,12 @@ html {
   scrollbar-gutter: stable;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
   --background: #dde6ed;
   --text-color: #27374d;
@@ -35,13 +41,16 @@ html {
 body {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+  min-width: 320px;
+  overflow-x: clip;
 }
 
 .App {
   width: 100%;
   max-width: 1250px;
   margin: 0 auto;
+  padding: 0 20px 40px;
+  box-sizing: border-box;
 }
 button {
   cursor: pointer;
@@ -66,4 +75,32 @@ button {
   align-self: flex-start;
   position: sticky;
   top: calc(var(--navbar-height) + 10px);
+}
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .profile {
+    width: 100%;
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --navbar-height: 100px;
+  }
+}
+
+@media (max-width: 640px) {
+  .App {
+    padding-inline: 12px;
+  }
+
+  .container {
+    gap: 12px;
+    margin-top: 12px;
+  }
 }

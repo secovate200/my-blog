@@ -1,0 +1,655 @@
+/* Keep SimpleUI's original design and remove only the theme chooser. */
+.navbar .right > .el-button:not(.is-circle) {
+    display: none !important;
+}
+
+.blog-admin-home {
+    padding: 20px;
+}
+
+.dashboard-card {
+    box-sizing: border-box;
+    width: 100%;
+    clear: both;
+    margin-bottom: 20px;
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    color: #303133;
+    font-size: 16px;
+}
+
+.dashboard-card-header i {
+    width: 22px;
+    color: #606266;
+}
+
+.dashboard-card-header small {
+    color: #909399;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.status-item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 13px;
+    padding: 17px;
+    border: 1px solid #ebeef5;
+    border-radius: 5px;
+    color: #303133;
+    text-decoration: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+a.status-item:hover {
+    border-color: #c6e2ff;
+    color: #303133;
+    box-shadow: 0 5px 14px rgba(64, 158, 255, 0.1);
+}
+
+.status-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border-radius: 6px;
+    font-size: 17px;
+}
+
+.status-icon-primary { background: #ecf5ff; color: #409eff; }
+.status-icon-success { background: #f0f9eb; color: #67c23a; }
+.status-icon-warning { background: #fdf6ec; color: #e6a23c; }
+.status-icon-info { background: #f4f4f5; color: #909399; }
+
+.status-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.status-copy strong {
+    color: #303133;
+    font-size: 23px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.status-copy small {
+    overflow: hidden;
+    color: #909399;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dashboard-quick-item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 11px;
+    padding: 14px;
+    border-radius: 4px;
+    background: #f5f7fa;
+    color: #606266;
+    text-decoration: none;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+.dashboard-quick-item:hover {
+    background: #ecf5ff;
+    color: #409eff;
+}
+
+.dashboard-quick-icon {
+    width: 24px;
+    flex: 0 0 24px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.dashboard-quick-name {
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.publish-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.publish-summary div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 20px;
+    border-right: 1px solid #ebeef5;
+}
+
+.publish-summary div:first-child { padding-left: 0; }
+.publish-summary div:last-child { border-right: 0; }
+.publish-summary strong { color: #303133; font-size: 22px; }
+.publish-summary span { color: #909399; font-size: 12px; }
+
+.dashboard-sidebar .action-card {
+    min-height: 520px;
+}
+
+.action-list {
+    position: relative;
+}
+
+.action-item {
+    position: relative;
+    display: flex;
+    gap: 13px;
+    padding: 0 0 20px;
+}
+
+.action-item:not(:last-child)::before {
+    position: absolute;
+    top: 10px;
+    bottom: 0;
+    left: 4px;
+    width: 1px;
+    background: #e4e7ed;
+    content: "";
+}
+
+.action-marker {
+    position: relative;
+    z-index: 1;
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: #409eff;
+}
+
+.action-content {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.action-content strong {
+    overflow: hidden;
+    color: #303133;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-content span,
+.action-content time {
+    color: #909399;
+    font-size: 11px;
+}
+
+.dashboard-empty {
+    padding: 70px 0;
+    color: #c0c4cc;
+    text-align: center;
+}
+
+.dashboard-empty i { font-size: 28px; }
+.dashboard-empty p { margin: 10px 0 0; font-size: 12px; }
+
+@media (max-width: 1200px) {
+    .status-grid,
+    .dashboard-quick-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 991px) {
+    .dashboard-sidebar .action-card { min-height: auto; }
+}
+
+@media (max-width: 640px) {
+    .blog-admin-home { padding: 12px; }
+    .dashboard-card-header small { display: none; }
+    .status-grid,
+    .dashboard-quick-grid { grid-template-columns: 1fr; }
+    .publish-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 0; }
+    .publish-summary div { border-right: 0; padding: 0; }
+}
+
+/* Shared list and form layout ------------------------------------------------ */
+#content,
+#changelist,
+#changelist-form,
+#toolbar,
+.results {
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+#toolbar {
+    padding: 12px;
+    border-bottom: 1px solid #ebeef5;
+}
+
+#toolbar #changelist-search,
+#toolbar .simpleui-form,
+#changelist-form .actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#toolbar .simpleui-form-item {
+    width: auto !important;
+    min-width: 150px;
+    flex: 1 1 180px;
+    margin: 0 !important;
+}
+
+#toolbar .el-button,
+#changelist-form .actions .el-button {
+    flex: 0 0 auto;
+}
+
+#changelist-form .actions {
+    padding: 12px;
+}
+
+#changelist-form .action-counter {
+    margin: 0 6px;
+    color: #606266;
+    white-space: nowrap;
+}
+
+.results {
+    max-width: 100%;
+    overflow-x: auto !important;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
+}
+
+#result_list {
+    width: 100%;
+    min-width: max-content;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+#result_list th,
+#result_list td {
+    max-width: 360px;
+    padding: 10px 12px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+    vertical-align: middle;
+}
+
+#result_list tbody tr:hover td {
+    background: #f5faff;
+}
+
+body .module > h2,
+body .module caption,
+body .inline-group h2 {
+    border-bottom: 1px solid #dcdfe6 !important;
+    background: #f5f7fa !important;
+    background-color: #f5f7fa !important;
+    background-image: none !important;
+    color: #303133 !important;
+}
+
+.form-row,
+.form-row > div,
+.fieldBox,
+.aligned,
+.aligned > div {
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.form-row input[type="text"],
+.form-row input[type="email"],
+.form-row input[type="url"],
+.form-row input[type="number"],
+.form-row input[type="password"],
+.form-row textarea,
+.form-row select {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.readonly {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.submit-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* SimpleUI positions History absolutely, which makes it appear to follow the
+   inner admin scroll area. Keep object actions in the normal document flow. */
+.object-tools:has(.historylink) {
+    position: static !important;
+    inset: auto !important;
+    display: flex;
+    width: auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    float: none !important;
+    margin: 0 10px 12px !important;
+    padding: 0;
+}
+
+.object-tools:has(.historylink) li {
+    margin: 0 !important;
+    list-style: none;
+}
+
+/* Unified admin controls ----------------------------------------------------- */
+#content button,
+#content .button,
+#content input[type="button"],
+#content input[type="submit"],
+.object-tools .el-button,
+.selector-chooser a,
+.related-widget-wrapper-link {
+    box-sizing: border-box;
+    border-radius: 4px !important;
+    font-weight: 500;
+    line-height: 1.2;
+    transition: border-color 150ms ease, background-color 150ms ease,
+        color 150ms ease, box-shadow 150ms ease;
+}
+
+#content button:focus-visible,
+#content .button:focus-visible,
+#content input[type="button"]:focus-visible,
+#content input[type="submit"]:focus-visible,
+.object-tools .el-button:focus-visible,
+.selector-chooser a:focus-visible,
+.related-widget-wrapper-link:focus-visible {
+    outline: 2px solid rgba(64, 158, 255, 0.4) !important;
+    outline-offset: 2px;
+}
+
+#content button:disabled,
+#content input:disabled,
+#content .el-button.is-disabled {
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.submit-row input[type="submit"],
+.submit-row button.el-button,
+.object-tools .historylink {
+    min-height: 36px;
+    padding: 9px 16px !important;
+    border: 1px solid #dcdfe6 !important;
+    background: #fff !important;
+    color: #606266 !important;
+}
+
+.submit-row .other-wrap,
+.submit-row .delete-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.submit-row input[type="submit"]:hover,
+.object-tools .historylink:hover {
+    border-color: #409eff !important;
+    background: #ecf5ff !important;
+    color: #409eff !important;
+}
+
+.submit-row input.default,
+.submit-row input[name="_save"],
+.submit-row button[name="_save"] {
+    border-color: #409eff !important;
+    background: #409eff !important;
+    color: #fff !important;
+}
+
+.submit-row input.default:hover,
+.submit-row input[name="_save"]:hover,
+.submit-row button[name="_save"]:hover {
+    border-color: #66b1ff !important;
+    background: #66b1ff !important;
+    color: #fff !important;
+}
+
+.submit-row button[name="_continue"] {
+    border-color: #67c23a !important;
+    background: #67c23a !important;
+    color: #fff !important;
+}
+
+.submit-row button[name="_continue"]:hover {
+    border-color: #85ce61 !important;
+    background: #85ce61 !important;
+    color: #fff !important;
+}
+
+.submit-row .deletelink,
+#content .deletelink,
+#content .el-button--danger {
+    border-color: #f56c6c !important;
+    background: #f56c6c !important;
+    color: #fff !important;
+}
+
+.submit-row .deletelink:hover,
+#content .deletelink:hover,
+#content .el-button--danger:hover {
+    border-color: #f78989 !important;
+    background: #f78989 !important;
+    color: #fff !important;
+}
+
+.related-widget-wrapper-link {
+    display: inline-flex !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    border: 1px solid #dcdfe6;
+    background: #fff;
+    color: #606266 !important;
+    vertical-align: middle;
+}
+
+.related-widget-wrapper-link:hover {
+    border-color: #409eff;
+    background: #ecf5ff;
+    color: #409eff !important;
+}
+
+.selector-chooser a {
+    display: inline-flex;
+    min-width: 32px;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dcdfe6;
+    background-color: #fff;
+}
+
+.selector button,
+.selector .selector-chooseall,
+.selector .selector-clearall {
+    display: inline-flex !important;
+    min-width: 32px;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dcdfe6 !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    color: #606266 !important;
+}
+
+.selector button:hover,
+.selector .selector-chooseall:hover,
+.selector .selector-clearall:hover {
+    border-color: #409eff !important;
+    background: #ecf5ff !important;
+    color: #409eff !important;
+}
+
+#pagination .el-pager li,
+#pagination .btn-prev,
+#pagination .btn-next {
+    border-radius: 4px !important;
+}
+
+#changelist-form .btn-group .el-button,
+#changelist-form .actions > .el-button {
+    min-width: 34px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    #content {
+        width: auto !important;
+        margin: 10px !important;
+    }
+
+    #toolbar {
+        padding: 10px;
+    }
+
+    #toolbar #changelist-search,
+    #toolbar .simpleui-form {
+        align-items: stretch;
+    }
+
+    #toolbar .simpleui-form-item {
+        min-width: min(100%, 140px);
+        flex: 1 1 140px;
+    }
+
+    #toolbar .el-button {
+        flex: 1 1 100%;
+    }
+
+    #changelist-form .actions {
+        align-items: center;
+        padding: 10px;
+    }
+
+    #result_list th,
+    #result_list td {
+        max-width: 260px;
+        padding: 9px 10px !important;
+    }
+
+    .aligned label {
+        display: block;
+        width: auto !important;
+        float: none !important;
+        margin: 0 0 7px !important;
+        padding: 0 !important;
+    }
+
+    .aligned .form-row > div,
+    .aligned .form-row > div > div,
+    .form-row .fieldBox {
+        width: 100% !important;
+        margin: 0 !important;
+        float: none !important;
+    }
+
+    .form-row input[type="text"],
+    .form-row input[type="email"],
+    .form-row input[type="url"],
+    .form-row input[type="number"],
+    .form-row input[type="password"],
+    .form-row textarea,
+    .form-row select {
+        width: 100% !important;
+    }
+
+    .selector {
+        display: flex !important;
+        width: 100% !important;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .selector-available,
+    .selector-chosen {
+        width: 100% !important;
+        float: none !important;
+    }
+
+    .selector-chooser {
+        display: flex !important;
+        width: 100% !important;
+        height: auto !important;
+        justify-content: center;
+        gap: 12px;
+        margin: 0 !important;
+        padding: 6px 0 !important;
+    }
+
+    .submit-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .object-tools:has(.historylink) {
+        justify-content: flex-start;
+        margin: 0 10px 10px !important;
+    }
+
+    .submit-row input,
+    .submit-row button,
+    .submit-row a,
+    .submit-row .other-wrap,
+    .submit-row .delete-wrap {
+        width: 100% !important;
+        box-sizing: border-box;
+        text-align: center;
+    }
+}

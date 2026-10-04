@@ -113,6 +113,15 @@
   .errorPanel {
     padding-inline: 24px;
   }
+
+  .errorActions {
+    flex-direction: column;
+  }
+
+  .errorActions a,
+  .errorActions button {
+    width: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

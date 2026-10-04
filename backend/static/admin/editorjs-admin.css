@@ -1,0 +1,60 @@
+.editorjs-holder {
+  width: min(100%, 920px);
+  min-height: 520px;
+  box-sizing: border-box;
+  border: 1px solid #d8dde6;
+  background: #fff;
+  color: #37352f;
+}
+
+.editorjs-holder .codex-editor__redactor {
+  padding: 42px clamp(26px, 7vw, 92px) 120px !important;
+}
+
+.editorjs-holder .ce-block__content,
+.editorjs-holder .ce-toolbar__content {
+  max-width: 720px;
+}
+
+.editorjs-holder .ce-header {
+  color: #202124;
+  line-height: 1.35;
+}
+
+.editorjs-holder .ce-code__textarea {
+  min-height: 140px;
+  color: #2f3437;
+  background: #f7f6f3;
+  font-family: Consolas, monospace;
+}
+
+.editorjs-holder .cdx-quote {
+  margin: 14px 0;
+  padding: 3px 0 3px 18px;
+  border-left: 3px solid #37352f;
+}
+
+.editorjs-holder .cdx-quote__text,
+.editorjs-holder .cdx-quote__caption {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.editorjs-holder .cdx-quote__text {
+  min-height: auto;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.editorjs-holder .cdx-quote__caption {
+  margin-top: 8px;
+  color: #787774;
+  font-size: 12px;
+}
+
+@media (max-width: 767px) {
+  .editorjs-holder .codex-editor__redactor {
+    padding: 28px 20px 90px !important;
+  }
+}
