@@ -148,6 +148,9 @@ class ProjectMemberInline(admin.TabularInline):
     # Inline에서 사용할 프로젝트 멤버 모델을 지정합니다.
     model = ProjectMember
 
+    # 사용자가 많아져도 이름이나 이메일로 빠르게 찾아 지정할 수 있게 합니다.
+    autocomplete_fields = ("user",)
+
     # 기본으로 표시할 빈 추가 입력 줄을 없앱니다.
     extra = 0
 
@@ -337,7 +340,16 @@ class ProjectMemberAdmin(SuperuserOnlyAdmin):
     list_filter = ("project", "user")
 
     # 프로젝트 제목과 사용자 이름으로 권한을 검색할 수 있게 합니다.
-    search_fields = ("project__title", "user__username")
+    search_fields = (
+        "project__title",
+        "user__username",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+    )
+
+    # 프로젝트와 사용자를 검색형 선택 상자로 제공합니다.
+    autocomplete_fields = ("project", "user")
 
     # 권한 부여자와 권한 부여일은 직접 변경하지 못하게 합니다.
     readonly_fields = ("granted_by", "created_at")

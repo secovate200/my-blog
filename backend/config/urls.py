@@ -16,12 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
+from .views import admin_login_redirect, admin_logout_redirect
 
 admin.site.site_header = 'My Blog 관리'
 admin.site.site_title = 'My Blog Admin'
 admin.site.index_title = '콘텐츠 관리'
 
 urlpatterns = [
+    path('admin/login/', admin_login_redirect, name='dashboard-admin-login'),
+    path('admin/logout/', admin_logout_redirect, name='dashboard-admin-logout'),
     path('admin/', admin.site.urls),
     path('blog/', include('blog.urls')),
 ]

@@ -51,6 +51,15 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'DJANGO_CSRF_TRUSTED_ORIGINS',
+        'http://localhost:5174,http://127.0.0.1:5174',
+    ).split(',')
+    if origin.strip()
+]
+
 
 # Application definition
 
@@ -175,6 +184,15 @@ SIMPLEUI_ICON = {
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+DASHBOARD_LOGIN_URL = os.environ.get(
+    'DASHBOARD_LOGIN_URL',
+    'http://localhost:5174/#/login',
+)
+DASHBOARD_FORBIDDEN_URL = os.environ.get(
+    'DASHBOARD_FORBIDDEN_URL',
+    'http://localhost:5174/#/403',
+)
 
 # Discord 웹훅 URL은 저장소에 기록하지 않고 실행 환경에서만 주입합니다.
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL', '')

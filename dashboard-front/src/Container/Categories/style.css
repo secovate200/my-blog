@@ -1,0 +1,18 @@
+/* Category management page. */
+.categories-panel { display: flex; flex: 1; flex-direction: column; margin-top: 2rem; padding: 20px; border-radius: 10px; background: var(--background); color: var(--text-color); }
+.categories-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 1rem 1.1rem; border-radius: 10px; background: var(--third-background); }
+.categories-heading h2 { color: var(--header-color); font-size: 1.15rem; }
+.categories-heading p { margin-top: 4px; color: var(--sub-text); font-size: 0.68rem; }
+.categories-heading > strong { min-width: 44px; padding: 9px; border-radius: 8px; background: var(--text-color); color: var(--content-background); font-size: 0.7rem; text-align: center; }
+.category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.category-item { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 16px; border-radius: 10px; background: var(--third-background); }
+.category-item--icon { display: grid; place-items: center; width: 46px; height: 46px; flex: 0 0 46px; border-radius: 10px; background: var(--background); color: var(--header-color); }
+.category-item--body { min-width: 0; flex: 1; }
+.category-item--body h3 { color: var(--text-color); font-size: 0.86rem; }
+.category-item--body p { margin-top: 5px; color: var(--sub-text); font-size: 0.65rem; }
+.category-item--stats { display: flex; gap: 8px; }
+.category-item--stats div { min-width: 54px; padding: 7px 8px; border-radius: 8px; background: var(--background); text-align: center; }
+.category-item--stats dt { color: var(--sub-text); font-size: 0.58rem; }
+.category-item--stats dd { margin-top: 2px; color: var(--text-color); font-size: 0.76rem; font-weight: 700; }
+@media (max-width: 1000px) { .category-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .categories-panel { margin-top: 1.2rem; padding: 12px; } .category-item { align-items: flex-start; flex-wrap: wrap; } .category-item--stats { width: 100%; padding-left: 58px; } .category-item--stats div { flex: 1; } }

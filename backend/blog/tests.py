@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 import tempfile
 from unittest.mock import patch
 
@@ -8,7 +9,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .content import sanitize_content
-from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectPost, Tag
+from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectMember, ProjectPost, Tag
 from .notifications import send_contact_receipt, send_contact_reply
 
 
@@ -94,6 +95,146 @@ class BlogAssetTests(TestCase):
                 self.assertIn("attachment", download["Content-Disposition"])
 
 
+class DashboardAuthenticationTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_superuser(
+            username="dashboard-admin",
+            email="dashboard@example.com",
+            password="secure-password",
+        )
+        self.regular_user = get_user_model().objects.create_user(
+            username="regular-user",
+            password="secure-password",
+        )
+
+    def test_csrf_endpoint_sets_cookie(self):
+        response = self.client.get(reverse("blog:dashboard-csrf"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrftoken", response.cookies)
+
+    def test_staff_user_can_login_with_username_and_read_session(self):
+        response = self.client.post(
+            reverse("blog:dashboard-login"),
+            data={"account": "dashboard-admin", "password": "secure-password"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["username"], "dashboard-admin")
+        current = self.client.get(reverse("blog:dashboard-current-user"))
+        self.assertEqual(current.status_code, 200)
+        self.assertTrue(current.json()["is_superuser"])
+
+    def test_staff_user_can_login_with_email(self):
+        response = self.client.post(
+            reverse("blog:dashboard-login"),
+            data={"account": "dashboard@example.com", "password": "secure-password"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_regular_user_can_login_to_dashboard_without_admin_access(self):
+        response = self.client.post(
+            reverse("blog:dashboard-login"),
+            data={"account": "regular-user", "password": "secure-password"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["is_staff"])
+        self.assertEqual(response.json()["role"], "사용자")
+
+    def test_dashboard_summary_uses_database_counts_and_recent_posts(self):
+        category = Category.objects.create(name="Database")
+        Post.objects.create(
+            title="DB 게시글",
+            author=self.admin,
+            category=category,
+            content="{}",
+            status=Post.Status.PUBLISHED,
+        )
+        project = Project.objects.create(title="연구", description="테스트")
+        ProjectMember.objects.create(project=project, user=self.regular_user, granted_by=self.admin)
+        ProjectPost.objects.create(
+            project=project,
+            author=self.admin,
+            title="연구 글",
+            content="{}",
+        )
+        self.regular_user.user_permissions.add(*Permission.objects.filter(
+            content_type__app_label="blog",
+            codename__in=["view_category", "view_post", "view_project", "view_projectpost"],
+        ))
+        self.client.force_login(self.regular_user)
+
+        response = self.client.get(reverse("blog:dashboard-summary"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["counts"], {
+            "categories": 1,
+            "posts": 1,
+            "researchPosts": 1,
+        })
+        self.assertEqual(response.json()["recentPosts"][0]["title"], "DB 게시글")
+        projects = self.client.get(reverse("blog:dashboard-projects"))
+        self.assertEqual([item["name"] for item in projects.json()["items"]], ["연구"])
+
+    def test_user_without_group_permission_cannot_read_posts(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.get(reverse("blog:dashboard-posts"))
+
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(DASHBOARD_LOGIN_URL="http://localhost:5174/#/login")
+    def test_admin_logout_ends_session_and_redirects_to_dashboard_login(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(reverse("dashboard-admin-logout"))
+
+        self.assertRedirects(
+            response,
+            "http://localhost:5174/#/login",
+            fetch_redirect_response=False,
+        )
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    @override_settings(DASHBOARD_LOGIN_URL="http://localhost:5174/#/login")
+    def test_admin_login_redirects_to_dashboard_login(self):
+        response = self.client.get(reverse("dashboard-admin-login"))
+
+        self.assertRedirects(
+            response,
+            "http://localhost:5174/#/login",
+            fetch_redirect_response=False,
+        )
+
+    @override_settings(DASHBOARD_FORBIDDEN_URL="http://localhost:5174/#/403")
+    def test_non_staff_admin_access_redirects_to_dashboard_forbidden_page(self):
+        self.client.force_login(self.regular_user)
+
+        admin_response = self.client.get(reverse("admin:index"))
+        self.assertEqual(admin_response.status_code, 302)
+
+        response = self.client.get(admin_response["Location"])
+
+        self.assertRedirects(
+            response,
+            "http://localhost:5174/#/403",
+            fetch_redirect_response=False,
+        )
+
+    def test_logout_clears_dashboard_session(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse("blog:dashboard-logout"))
+
+        self.assertEqual(response.status_code, 200)
+        current = self.client.get(reverse("blog:dashboard-current-user"))
+        self.assertEqual(current.status_code, 401)
+
+
 class PostPaginationTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -146,6 +287,22 @@ class PostPaginationTests(TestCase):
                 for post in response.json()["results"]
             )
         )
+
+    def test_draft_post_is_hidden_from_public_list_and_detail(self):
+        draft = Post.objects.create(
+            title="Private Draft",
+            author=get_user_model().objects.get(username="author"),
+            category=Category.objects.get(name="Pagination Test"),
+            content="외부에 공개하면 안 되는 내용",
+            status=Post.Status.DRAFT,
+        )
+
+        list_response = self.client.get(reverse("blog:post-list"), {"q": "Private Draft"})
+        detail_response = self.client.get(reverse("blog:post-detail", args=[draft.pk]))
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(list_response.json()["count"], 0)
+        self.assertEqual(detail_response.status_code, 404)
 
     def test_post_list_can_search_title_content_category_and_tag(self):
         tag = Tag.objects.create(name="SearchableTag")

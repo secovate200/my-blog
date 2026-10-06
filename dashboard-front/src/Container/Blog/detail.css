@@ -1,0 +1,21 @@
+/* Blog detail page. */
+.blog-detail-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.blog-detail-toolbar > div { display: flex; gap: 8px; }
+.blog-detail-toolbar a, .blog-detail-toolbar button { min-height: 40px; display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 8px; padding: 0 13px; background: var(--background); color: var(--header-color); font: inherit; text-decoration: none; cursor: pointer; }
+.blog-detail-toolbar > div a { background: var(--text-color); color: var(--content-background); }
+.blog-detail-toolbar > div button { color: #d94b5b; }
+.blog-detail-content { min-width: 0; min-height: 0; overflow: hidden; }
+.blog-detail-article { min-width: 0; min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; border-radius: 10px; padding: clamp(28px, 5vw, 64px); background: var(--third-background); color: var(--text-color); }
+.blog-detail-article header { padding-bottom: 24px; border-bottom: 1px solid var(--background); }
+.blog-detail-article header > span { color: var(--header-color); font-size: 0.72rem; font-weight: 700; }
+.blog-detail-article h1 { max-width: 100%; margin-top: 12px; overflow-wrap: anywhere; font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1.25; }
+.blog-detail-article header > div { display: flex; gap: 12px; margin-top: 12px; color: var(--sub-text); font-size: 0.7rem; }
+.blog-detail-body { width: 100%; max-width: 800px; min-width: 0; margin-top: 30px; overflow-wrap: anywhere; word-break: break-word; line-height: 1.85; }
+.blog-detail-body p, .blog-detail-body li, .blog-detail-body blockquote, .blog-detail-body figcaption, .blog-detail-body a { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+.blog-detail-body h2, .blog-detail-body h3, .blog-detail-body h4 { margin-top: 28px; color: var(--header-color); }
+.blog-detail-body p, .blog-detail-body ul, .blog-detail-body ol, .blog-detail-body pre, .blog-detail-body blockquote, .blog-detail-body figure { margin-top: 14px; }
+.blog-detail-body pre { max-width: 100%; overflow-x: auto; overflow-wrap: normal; word-break: normal; border-radius: 8px; padding: 16px; background: #172033; color: #f5f7fa; }
+.blog-detail-body pre code { overflow-wrap: normal; word-break: normal; white-space: pre; }
+.blog-detail-body img { max-width: 100%; height: auto; border-radius: 8px; }
+.blog-detail-missing { align-items: center; justify-content: center; gap: 12px; }
+@media (max-width: 640px) { .blog-detail-toolbar { align-items: stretch; flex-direction: column; } .blog-detail-toolbar > div { width: 100%; } .blog-detail-toolbar > div > * { flex: 1; justify-content: center; } .blog-detail-article { padding: 24px 18px; } }

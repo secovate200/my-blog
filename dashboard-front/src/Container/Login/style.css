@@ -1,0 +1,34 @@
+.login-screen {
+  position: relative;
+  min-height: calc(100vh - 40px);
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  padding: 32px 20px;
+  background: var(--content-background);
+  color: var(--text-color);
+}
+
+.login-toolbar { position: absolute; top: 24px; right: 28px; left: 28px; display: flex; align-items: center; justify-content: space-between; }
+.login-toolbar a, .login-toolbar button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 9px; padding: 0 14px; background: var(--background); color: var(--header-color); font: inherit; font-size: .72rem; font-weight: 700; text-decoration: none; cursor: pointer; }
+.login-toolbar button { width: 42px; padding: 0; }
+.login-card { width: min(100%, 390px); }
+.login-blog-logo { width: 124px; height: 124px; display: block; margin: 0 auto 26px; text-decoration: none; }
+.login-blog-logo img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.login-copy { text-align: center; }
+.login-copy h1 { font-size: clamp(1.8rem, 5vw, 2.35rem); letter-spacing: -.04em; }
+.login-card form { display: grid; gap: 12px; margin-top: 30px; }
+.login-input { min-height: 50px; display: flex; align-items: center; gap: 10px; border: 1px solid color-mix(in srgb, var(--header-color) 28%, transparent); border-radius: 11px; padding: 0 14px; background: var(--background); color: var(--header-color); }
+.login-input:focus-within { border-color: var(--header-color); outline: 2px solid color-mix(in srgb, var(--header-color) 20%, transparent); }
+.login-input input { min-width: 0; flex: 1; border: 0; outline: none; background: transparent; color: var(--text-color); font: inherit; font-size: .76rem; }
+.login-input input::placeholder { color: var(--sub-text); }
+.login-input button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: transparent; color: var(--header-color); cursor: pointer; }
+.login-submit { min-height: 48px; border: 0; border-radius: 11px; background: var(--text-color); color: var(--content-background); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer; }
+.login-submit:hover, .login-submit:focus-visible { outline: 2px solid var(--header-color); outline-offset: 2px; }
+.login-submit:disabled { opacity: .6; cursor: wait; }
+.login-message { min-height: 18px; color: #d94b5b; font-size: .68rem; text-align: center; }
+
+@media (max-width: 560px) {
+  .login-screen { min-height: calc(100vh - 16px); border-radius: 14px; padding: 84px 18px 24px; }
+  .login-toolbar { top: 18px; right: 18px; left: 18px; }
+}

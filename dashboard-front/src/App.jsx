@@ -1,122 +1,217 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Sidebar } from "./components/Layout/Sidebar";
+import { Profile } from "./components/Layout/Profile";
+import { Content } from "./Container/Dashboard";
+import { BlogContent } from "./Container/Blog";
+import { SettingsContent } from "./Container/Settings";
+import { CategoriesContent } from "./Container/Categories";
+import { ResearchContent } from "./Container/Research";
+import { LoginContent } from "./Container/Login";
+import "./App.css";
+import "./styles/Responsive.css";
+import { StatusPage } from "./components/Feedback/StatusPage";
+import { getInitialTheme, getSharedTheme, saveTheme } from "./utils/theme";
+import { navigateToErrorPage } from "./utils/errorNavigation";
+import { fetchAdminCategories, fetchAdminProjects, getCurrentUser, login, logout } from "./api";
 
-function App() {
-  const [count, setCount] = useState(0)
+const WriteContent = lazy(() =>
+  import("./components/Editor/WriteContent").then((module) => ({
+    default: module.WriteContent,
+  })),
+);
+
+const ResearchDetailContent = lazy(() =>
+  import("./Container/Research/Detail").then((module) => ({
+    default: module.ResearchDetailContent,
+  })),
+);
+
+const BlogPostContent = lazy(() =>
+  import("./Container/Blog/Detail").then((module) => ({ default: module.BlogPostContent })),
+);
+
+const PageLoading = () => (
+  <main className="content" aria-busy="true" aria-live="polite">
+    <div className="page-loading">화면을 불러오는 중...</div>
+  </main>
+);
+export const App = () => {
+  const [theme, setTheme] = useState(getInitialTheme);
+  const getPage = () => {
+    const requestedPage = window.location.hash.replace("#/", "").split("?")[0] || "dashboard";
+    return requestedPage;
+  };
+  const [page, setPage] = useState(getPage);
+  const [user, setUser] = useState(undefined);
+  const [categories, setCategories] = useState([]);
+  const [researchCategories, setResearchCategories] = useState([]);
+
+  useEffect(() => {
+    getCurrentUser().then(setUser).catch((error) => {
+      setUser(null);
+      navigateToErrorPage(error);
+    });
+  }, []);
+
+  useEffect(() => {
+    const syncSession = async () => {
+      if (document.visibilityState === "hidden") return;
+
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+        if (!currentUser) window.location.hash = "/login";
+      } catch (error) {
+        navigateToErrorPage(error);
+      }
+    };
+
+    window.addEventListener("focus", syncSession);
+    document.addEventListener("visibilitychange", syncSession);
+    return () => {
+      window.removeEventListener("focus", syncSession);
+      document.removeEventListener("visibilitychange", syncSession);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchAdminCategories().then(({ items }) => setCategories(items)).catch(() => setCategories([]));
+    fetchAdminProjects().then(({ items }) => setResearchCategories(items)).catch(() => setResearchCategories([]));
+  }, [user]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    saveTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const syncTheme = () => {
+      const sharedTheme = getSharedTheme();
+      if (sharedTheme === "light" || sharedTheme === "dark") {
+        setTheme(sharedTheme);
+      }
+    };
+
+    window.addEventListener("focus", syncTheme);
+    document.addEventListener("visibilitychange", syncTheme);
+    return () => {
+      window.removeEventListener("focus", syncTheme);
+      document.removeEventListener("visibilitychange", syncTheme);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => setPage(getPage());
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  const toggleTheme = () => setTheme((current) => current === "light" ? "dark" : "light");
+  const researchCategoryId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("category") || "";
+  const researchPostId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("id") || "";
+  const blogPostId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("id") || "";
+  const statusCode = ["401", "403", "429", "500"].includes(page)
+    ? Number(page)
+    : null;
+
+  const handleLogin = async (credentials) => {
+    const currentUser = await login(credentials);
+    setUser(currentUser);
+    window.location.hash = "/dashboard";
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUser(null);
+      window.location.hash = "/login";
+    } catch (error) {
+      navigateToErrorPage(error);
+    }
+  };
+
+  if (user === undefined) return <PageLoading />;
+
+  if (statusCode) return <StatusPage code={statusCode} />;
+
+  if (!user && page !== "login") {
+    window.location.hash = "/login";
+    return <LoginContent theme={theme} onToggleTheme={toggleTheme} onLogin={handleLogin} />;
+  }
+
+  if (page === "login") {
+    if (user) window.location.hash = "/dashboard";
+    return <LoginContent theme={theme} onToggleTheme={toggleTheme} onLogin={handleLogin} />;
+  }
+
+  const knownPages = ["dashboard", "blog", "blog-view", "blog-edit", "write", "research", "research-write", "research-view", "research-edit", "settings", "categories"];
+
+  if (!knownPages.includes(page)) {
+    return <StatusPage code={404} />;
+  }
+
+  const requiredPermission = {
+    blog: "viewPosts", "blog-view": "viewPosts", "blog-edit": "changePosts", write: "addPosts",
+    research: "viewProjects", "research-view": "viewResearchPosts", "research-write": "addResearchPosts", "research-edit": "changeResearchPosts",
+    categories: "viewCategories",
+  }[page];
+  if (requiredPermission && !user.permissions?.[requiredPermission]) return <StatusPage code={403} />;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
-}
-
-export default App
+    <div className="dashboard">
+      <Sidebar permissions={user.permissions} currentPage={["write", "blog-view", "blog-edit"].includes(page) ? "blog" : ["research-write", "research-view", "research-edit"].includes(page) ? "research" : page === "categories" ? "dashboard" : page} />
+      <div className="dashboard--content">
+        <Suspense fallback={<PageLoading />}>
+          {page === "blog" ? (
+            <BlogContent theme={theme} onToggleTheme={toggleTheme} />
+          ) : page === "blog-view" || page === "blog-edit" ? (
+            <BlogPostContent postId={blogPostId} mode={page === "blog-edit" ? "edit" : "view"} theme={theme} categories={categories} />
+          ) : page === "write" ? (
+            <WriteContent theme={theme} categoryOptions={categories} />
+          ) : page === "research" ? (
+            <ResearchContent
+              categories={researchCategories}
+              onWrite={(categoryId) => { window.location.hash = `/research-write?category=${encodeURIComponent(categoryId)}`; }}
+            />
+          ) : page === "research-write" ? (
+            <WriteContent
+              theme={theme}
+              categoryOptions={researchCategories}
+              initialCategory={researchCategoryId}
+              defaultVisibility="private"
+              titlePlaceholder="연구 게시글 제목"
+              postType="research"
+            />
+          ) : page === "research-view" || page === "research-edit" ? (
+            <ResearchDetailContent postId={researchPostId} mode={page === "research-edit" ? "edit" : "view"} theme={theme} categories={researchCategories} />
+          ) : page === "settings" ? (
+            <SettingsContent theme={theme} onToggleTheme={toggleTheme} />
+          ) : page === "categories" ? (
+            <CategoriesContent />
+          ) : (
+            <Content
+              theme={theme}
+              onToggleTheme={toggleTheme}
+              onViewAll={() => { window.location.hash = "/blog"; }}
+              onViewCategories={() => { window.location.hash = "/categories"; }}
+              onViewPosts={() => { window.location.hash = "/blog"; }}
+              onViewResearch={() => { window.location.hash = "/research"; }}
+            />
+          )}
+        </Suspense>
+        <Profile
+          name={user?.name ?? "Secovate"}
+          role={user?.role ?? "관리자"}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onWritePost={() => { window.location.hash = "/write"; }}
+          onMyPage={() => { window.location.hash = "/settings"; }}
+          onLogout={handleLogout}
+          canAccessAdmin={Boolean(user?.is_staff)}
+          canWritePost={Boolean(user.permissions?.addPosts)}
+        />
+      </div>
+    </div>
+  );
+};
