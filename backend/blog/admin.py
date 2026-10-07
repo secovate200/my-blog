@@ -4,10 +4,11 @@ from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.auth.models import Group, User
 from django_smartbase_admin.admin.admin_base import SBAdmin, SBAdminTableInline
 from django_smartbase_admin.admin.site import sb_admin_site
+from django_smartbase_admin.engine.field import SBAdminField
 
 # 권한이 없는 프로젝트를 저장하려 할 때 사용할 예외를 가져옵니다.
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Case, CharField, Q, Value, When
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.urls import path, reverse
@@ -27,12 +28,80 @@ from .models import (
     ProjectMember,
     ProjectPost,
     Tag,
+    UserAccessStatus,
 )
+
+
+class UserAccessStatusInline(SBAdminTableInline):
+    model = UserAccessStatus
+    fk_name = "user"
+    extra = 0
+    max_num = 1
+    can_delete = False
+    readonly_fields = ("reviewed_by", "reviewed_at", "created_at", "updated_at")
+    fieldsets = (
+        (
+            "계정 승인 및 차단",
+            {
+                "fields": (
+                    "status",
+                    "ban_reason",
+                    ("reviewed_by", "reviewed_at"),
+                    ("created_at", "updated_at"),
+                )
+            },
+        ),
+    )
 
 
 @admin.register(User, site=sb_admin_site)
 class UserSBAdmin(SBAdmin, UserAdmin):
     """SmartBase-compatible user management and autocomplete source."""
+
+    # Django UserAdmin이 강제하는 기본 관리자 템플릿을 SmartBase 화면으로 교체합니다.
+    add_form_template = "sb_admin/actions/change_form.html"
+    change_user_password_template = "sb_admin/actions/change_password.html"
+    list_display = UserAdmin.list_display
+    sbadmin_list_display = (
+        *UserAdmin.list_display,
+        SBAdminField(
+            name="account_status_label",
+            title="계정 상태",
+            annotate=Case(
+                When(access_status__status="pending", then=Value("승인 대기")),
+                When(access_status__status="banned", then=Value("차단")),
+                default=Value("승인"),
+                output_field=CharField(),
+            ),
+            filter_disabled=True,
+        ),
+    )
+    list_filter = (*UserAdmin.list_filter, "access_status__status")
+    inlines = (UserAccessStatusInline,)
+    fieldsets = (
+        (None, {"fields": ("username", "password")}),
+        ("개인 정보", {"fields": ("first_name", "last_name", "email")}),
+        (
+            "권한",
+            {"fields": ("is_staff", "is_superuser", "groups", "user_permissions")},
+        ),
+        ("중요한 일자", {"fields": ("last_login", "date_joined")}),
+    )
+
+    def get_sbadmin_fieldsets(self, request, object_id=None):
+        # UserAdmin은 생성 시 password1/password2가 포함된 별도 필드셋을 사용합니다.
+        return self.add_fieldsets if object_id is None else self.fieldsets
+
+    def save_formset(self, request, form, formset, change):
+        if formset.model is UserAccessStatus:
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.reviewed_by = request.user
+                instance.reviewed_at = timezone.now()
+                instance.save()
+            formset.save_m2m()
+            return
+        super().save_formset(request, form, formset, change)
 
 
 @admin.register(Group, site=sb_admin_site)
@@ -40,6 +109,9 @@ class GroupSBAdmin(SBAdmin, GroupAdmin):
     """SmartBase-compatible Django group management."""
 
     list_display = ("name",)
+    fieldsets = (
+        ("그룹 정보", {"fields": ("name", "permissions")}),
+    )
 
 
 def project_member_user_search(request, queryset, model, search_term, language_code):

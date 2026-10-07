@@ -5,7 +5,7 @@ import { fetchAdminCategories } from "../../api";
 import { navigateToErrorPage } from "../../utils/errorNavigation";
 import "./style.css";
 
-export const CategoriesContent = () => {
+export const CategoriesContent = ({ showDrafts = false }) => {
   const [categories, setCategories] = useState([]);
   const [message, setMessage] = useState("불러오는 중입니다.");
   useEffect(() => { fetchAdminCategories().then(({ items }) => { setCategories(items); setMessage(""); }).catch((error) => navigateToErrorPage(error)); }, []);
@@ -26,7 +26,7 @@ export const CategoriesContent = () => {
               <div className="category-item--body"><h3>{category.name}</h3><p>전체 게시글 <strong>{category.total}</strong>개</p></div>
               <dl className="category-item--stats">
                 <div><dt>공개</dt><dd>{category.published}</dd></div>
-                <div><dt>작성 중</dt><dd>{category.draft}</dd></div>
+                {showDrafts && <div><dt>작성 중</dt><dd>{category.draft}</dd></div>}
               </dl>
             </article>
           ))}

@@ -13,6 +13,7 @@ from .views import (
     dashboard_csrf,
     dashboard_current_user,
     dashboard_login,
+    dashboard_signup,
     dashboard_logout,
     dashboard_summary,
     dashboard_posts,
@@ -29,6 +30,7 @@ app_name = "blog"
 urlpatterns = [
     path("auth/csrf/", dashboard_csrf, name="dashboard-csrf"),
     path("auth/login/", dashboard_login, name="dashboard-login"),
+    path("auth/signup/", dashboard_signup, name="dashboard-signup"),
     path("auth/logout/", dashboard_logout, name="dashboard-logout"),
     path("auth/me/", dashboard_current_user, name="dashboard-current-user"),
     path("dashboard/summary/", dashboard_summary, name="dashboard-summary"),

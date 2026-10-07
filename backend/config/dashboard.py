@@ -4,7 +4,7 @@ from django import forms
 from django.urls import reverse
 from django_smartbase_admin.engine.dashboard import SBAdminDashboardHtmlWidget
 
-from blog.models import ContactMessage, Post, Project, ProjectPost
+from blog.models import ContactMessage, Post, Project, ProjectPost, UserAccessStatus
 
 
 class MyBlogOverviewWidget(SBAdminDashboardHtmlWidget):
@@ -31,12 +31,6 @@ class MyBlogOverviewWidget(SBAdminDashboardHtmlWidget):
                 "url": reverse("sb_admin:blog_project_changelist"),
                 "tone": "blue",
             },
-            {
-                "label": "프로젝트 글",
-                "value": project_posts.count(),
-                "url": reverse("sb_admin:blog_projectpost_changelist"),
-                "tone": "violet",
-            },
         ]
         if is_superuser:
             stats[0:0] = [
@@ -55,6 +49,16 @@ class MyBlogOverviewWidget(SBAdminDashboardHtmlWidget):
             ]
             stats.append(
                 {
+                    "label": "승인 요청 대기",
+                    "value": UserAccessStatus.objects.filter(
+                        status=UserAccessStatus.Status.PENDING
+                    ).count(),
+                    "url": reverse("sb_admin:auth_user_changelist"),
+                    "tone": "violet",
+                }
+            )
+            stats.append(
+                {
                     "label": "미답변 문의",
                     "value": ContactMessage.objects.exclude(
                         status=ContactMessage.Status.REPLIED
@@ -65,12 +69,6 @@ class MyBlogOverviewWidget(SBAdminDashboardHtmlWidget):
             )
 
         quick_actions = [
-            {
-                "label": "프로젝트 글 작성",
-                "description": "프로젝트에 새 콘텐츠를 추가합니다.",
-                "url": reverse("sb_admin:blog_projectpost_add"),
-                "icon": "write",
-            },
             {
                 "label": "프로젝트 관리",
                 "description": "공개 여부와 표시 순서를 조정합니다.",
@@ -92,7 +90,23 @@ class MyBlogOverviewWidget(SBAdminDashboardHtmlWidget):
                     "url": reverse("sb_admin:blog_contactmessage_changelist"),
                     "icon": "mail",
                 },
+                {
+                    "label": "가입 승인 요청",
+                    "description": "승인 대기 중인 사용자를 확인합니다.",
+                    "url": reverse("sb_admin:auth_user_changelist"),
+                    "icon": "user",
+                },
             ]
+        else:
+            quick_actions.insert(
+                0,
+                {
+                    "label": "프로젝트 글 작성",
+                    "description": "프로젝트에 새 콘텐츠를 추가합니다.",
+                    "url": reverse("sb_admin:blog_projectpost_add"),
+                    "icon": "write",
+                },
+            )
 
         recent_posts = project_posts.order_by("-created_at")[:5]
         if is_superuser:

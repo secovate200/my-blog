@@ -1,13 +1,9 @@
-import { useState } from "react";
-import { useCreateBlockNote } from "@blocknote/react";
-import { BlockNoteView } from "@blocknote/mantine";
-import { ko } from "@blocknote/core/locales";
-import "@blocknote/core/fonts/inter.css";
-import "@blocknote/mantine/style.css";
+import { useRef, useState } from "react";
 import "./Write.css";
-import { createPost, createResearchPost, updatePost, updateResearchPost, uploadMedia } from "../../api";
-import { editorJsToBlockNote, serializeForBlog } from "../../utils/editorContent";
+import { createPost, createResearchPost, updatePost, updateResearchPost } from "../../api";
+import { editorJsToPlainText } from "../../utils/editorContent";
 import { navigateToErrorPage } from "../../utils/errorNavigation";
+import EditorJsEditor from "./EditorJsEditor";
 
 export const WriteContent = ({
   theme,
@@ -19,21 +15,22 @@ export const WriteContent = ({
   initialPost = null,
 }) => {
   const [message, setMessage] = useState("");
-  const editor = useCreateBlockNote({
-    uploadFile: uploadMedia,
-    dictionary: ko,
-    initialContent: initialPost ? editorJsToBlockNote(initialPost.content) : [{ type: "paragraph", content: "" }],
-  });
+  const editorRef = useRef(null);
 
   const prepareSubmission = async (form, status) => {
     const formData = new FormData(form);
-    const blocks = editor.document;
-    const markdown = await editor.blocksToMarkdownLossy(blocks);
-    const content = serializeForBlog(blocks);
+    if (!editorRef.current) {
+      setMessage("편집기를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    await editorRef.current.isReady;
+    const editorData = await editorRef.current.save();
+    const content = JSON.stringify(editorData);
+    const markdown = editorJsToPlainText(editorData);
 
     formData.set("status", status);
     formData.set("postType", postType);
-    formData.set("contentBlocks", JSON.stringify(blocks));
+    formData.set("contentBlocks", content);
     formData.set("contentMarkdown", markdown);
 
     setMessage("저장하는 중입니다...");
@@ -76,15 +73,11 @@ export const WriteContent = ({
           <h2 id="post-editor-title" className="visually-hidden">
             게시글 본문
           </h2>
-          <div className="blocknote-editor">
-            <BlockNoteView
-              editor={editor}
-              theme={theme === "dark" ? "dark" : "light"}
-              sideMenu={false}
-              data-theming-css-variables-demo
-            />
-          </div>
-          <p className="blocknote-help">
+          <EditorJsEditor
+            editorRef={editorRef}
+            initialContent={initialPost?.content ?? ""}
+          />
+          <p className="editorjs-help">
             <kbd>/</kbd>를 입력해 제목, 목록, 코드, 이미지, 파일 등의 블록을
             추가할 수 있습니다.
           </p>

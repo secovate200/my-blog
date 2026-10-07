@@ -20,10 +20,31 @@ export async function fetchDashboardSummary() {
   return data;
 }
 
-export const uploadMedia = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => resolve(reader.result);
-  reader.onerror = () => reject(reader.error);
-  reader.readAsDataURL(file);
-});
+const cookie = (name) =>
+  document.cookie
+    .split("; ")
+    .find((item) => item.startsWith(`${name}=`))
+    ?.split("=")[1];
+
+export async function uploadMedia(file) {
+  await fetch("/blog/auth/csrf/", { credentials: "same-origin" });
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/blog/assets/upload/", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "X-CSRFToken": decodeURIComponent(cookie("csrftoken") ?? ""),
+    },
+    body: formData,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.file?.url) {
+    const error = new Error(data.message || data.detail || "파일을 업로드하지 못했습니다.");
+    error.status = response.status;
+    throw error;
+  }
+  return data.file;
+}
 

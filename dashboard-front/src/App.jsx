@@ -6,13 +6,13 @@ import { BlogContent } from "./Container/Blog";
 import { SettingsContent } from "./Container/Settings";
 import { CategoriesContent } from "./Container/Categories";
 import { ResearchContent } from "./Container/Research";
-import { LoginContent } from "./Container/Login";
+import { LoginContent, SignupContent } from "./Container/Login";
 import "./App.css";
 import "./styles/Responsive.css";
 import { StatusPage } from "./components/Feedback/StatusPage";
 import { getInitialTheme, getSharedTheme, saveTheme } from "./utils/theme";
 import { navigateToErrorPage } from "./utils/errorNavigation";
-import { fetchAdminCategories, fetchAdminProjects, getCurrentUser, login, logout } from "./api";
+import { fetchAdminCategories, fetchAdminProjects, getCurrentUser, login, logout, signup } from "./api";
 
 const WriteContent = lazy(() =>
   import("./components/Editor/WriteContent").then((module) => ({
@@ -94,9 +94,13 @@ export const App = () => {
     };
 
     window.addEventListener("focus", syncTheme);
+    window.addEventListener("storage", syncTheme);
     document.addEventListener("visibilitychange", syncTheme);
+    const intervalId = window.setInterval(syncTheme, 1000);
     return () => {
+      window.clearInterval(intervalId);
       window.removeEventListener("focus", syncTheme);
+      window.removeEventListener("storage", syncTheme);
       document.removeEventListener("visibilitychange", syncTheme);
     };
   }, []);
@@ -131,11 +135,13 @@ export const App = () => {
     }
   };
 
+  const handleSignup = (account) => signup(account);
+
   if (user === undefined) return <PageLoading />;
 
   if (statusCode) return <StatusPage code={statusCode} />;
 
-  if (!user && page !== "login") {
+  if (!user && page !== "login" && page !== "signup") {
     window.location.hash = "/login";
     return <LoginContent theme={theme} onToggleTheme={toggleTheme} onLogin={handleLogin} />;
   }
@@ -143,6 +149,11 @@ export const App = () => {
   if (page === "login") {
     if (user) window.location.hash = "/dashboard";
     return <LoginContent theme={theme} onToggleTheme={toggleTheme} onLogin={handleLogin} />;
+  }
+
+  if (page === "signup") {
+    if (user) window.location.hash = "/dashboard";
+    return <SignupContent theme={theme} onToggleTheme={toggleTheme} onSignup={handleSignup} />;
   }
 
   const knownPages = ["dashboard", "blog", "blog-view", "blog-edit", "write", "research", "research-write", "research-view", "research-edit", "settings", "categories"];
@@ -166,7 +177,7 @@ export const App = () => {
           {page === "blog" ? (
             <BlogContent theme={theme} onToggleTheme={toggleTheme} />
           ) : page === "blog-view" || page === "blog-edit" ? (
-            <BlogPostContent postId={blogPostId} mode={page === "blog-edit" ? "edit" : "view"} theme={theme} categories={categories} />
+            <BlogPostContent postId={blogPostId} mode={page === "blog-edit" ? "edit" : "view"} theme={theme} categories={categories} permissions={user.permissions} />
           ) : page === "write" ? (
             <WriteContent theme={theme} categoryOptions={categories} />
           ) : page === "research" ? (
@@ -188,7 +199,7 @@ export const App = () => {
           ) : page === "settings" ? (
             <SettingsContent theme={theme} onToggleTheme={toggleTheme} />
           ) : page === "categories" ? (
-            <CategoriesContent />
+            <CategoriesContent showDrafts={Boolean(user.permissions?.viewDraftPosts)} />
           ) : (
             <Content
               theme={theme}

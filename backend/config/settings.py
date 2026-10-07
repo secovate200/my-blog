@@ -55,7 +55,7 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         'DJANGO_CSRF_TRUSTED_ORIGINS',
-        'http://localhost:5174,http://127.0.0.1:5174',
+        'http://localhost:5175,http://127.0.0.1:5175',
     ).split(',')
     if origin.strip()
 ]
@@ -148,7 +148,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ko'
+
+# 관리자와 서비스 UI는 한국어만 제공합니다.
+LANGUAGES = [
+    ('ko', '한국어'),
+]
 
 TIME_ZONE = 'UTC'
 
@@ -176,15 +181,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 DASHBOARD_LOGIN_URL = os.environ.get(
     'DASHBOARD_LOGIN_URL',
-    'http://localhost:5174/#/login',
+    'http://localhost:5175/#/login',
 )
 DASHBOARD_FORBIDDEN_URL = os.environ.get(
     'DASHBOARD_FORBIDDEN_URL',
-    'http://localhost:5174/#/403',
+    'http://localhost:5175/#/403',
 )
 
-# Discord 웹훅 URL은 저장소에 기록하지 않고 실행 환경에서만 주입합니다.
+# 문의 알림과 회원가입 알림은 서로 다른 Discord 채널로 보낼 수 있습니다.
+# 기존 DISCORD_WEBHOOK_URL은 문의 알림용으로 유지합니다.
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL', '')
+DISCORD_SIGNUP_WEBHOOK_URL = os.environ.get('DISCORD_SIGNUP_WEBHOOK_URL', '')
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')

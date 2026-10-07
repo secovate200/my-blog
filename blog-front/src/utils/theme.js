@@ -1,32 +1,33 @@
 const THEME_COOKIE = "secovate-theme";
 const THEME_STORAGE_KEY = "secovate-theme";
-const LEGACY_STORAGE_KEYS = ["theme", "blog-theme"];
+const LEGACY_STORAGE_KEYS = ["blog-theme", "theme"];
 const THEME_MAX_AGE = 60 * 60 * 24 * 365;
 
 const isTheme = (value) => value === "light" || value === "dark";
 
-const readCookie = () =>
-  document.cookie
+const readCookie = () => {
+  const value = document.cookie
     .split("; ")
     .find((item) => item.startsWith(`${THEME_COOKIE}=`))
     ?.split("=")[1];
+  return isTheme(value) ? value : null;
+};
 
-export const getInitialTheme = () => {
-  const sharedTheme = readCookie();
-  if (isTheme(sharedTheme)) return sharedTheme;
-
-  const currentTheme = localStorage.getItem(THEME_STORAGE_KEY);
-  if (isTheme(currentTheme)) return currentTheme;
+const readStoredTheme = () => {
+  const current = localStorage.getItem(THEME_STORAGE_KEY);
+  if (isTheme(current)) return current;
 
   for (const key of LEGACY_STORAGE_KEYS) {
-    const legacyTheme = localStorage.getItem(key);
-    if (isTheme(legacyTheme)) return legacyTheme;
+    const legacy = localStorage.getItem(key);
+    if (isTheme(legacy)) return legacy;
   }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return null;
 };
+
+export const getInitialTheme = () =>
+  readCookie()
+  ?? readStoredTheme()
+  ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
 export const saveTheme = (theme) => {
   if (!isTheme(theme)) return;

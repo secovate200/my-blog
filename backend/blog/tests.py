@@ -181,12 +181,111 @@ class DashboardAuthenticationTests(TestCase):
         projects = self.client.get(reverse("blog:dashboard-projects"))
         self.assertEqual([item["name"] for item in projects.json()["items"]], ["연구"])
 
+    def test_dashboard_summary_is_empty_for_regular_user_without_project(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.get(reverse("blog:dashboard-summary"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["counts"], {
+            "categories": 0,
+            "posts": 0,
+            "researchPosts": 0,
+        })
+        self.assertEqual(response.json()["recentPosts"], [])
+
     def test_user_without_group_permission_cannot_read_posts(self):
         self.client.force_login(self.regular_user)
 
         response = self.client.get(reverse("blog:dashboard-posts"))
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["items"], [])
+
+    def test_regular_user_can_only_read_published_posts(self):
+        category = Category.objects.create(name="공개 범위")
+        published = Post.objects.create(
+            title="공개 게시글",
+            author=self.admin,
+            category=category,
+            content="{}",
+            status=Post.Status.PUBLISHED,
+        )
+        draft = Post.objects.create(
+            title="비공개 게시글",
+            author=self.admin,
+            category=category,
+            content="{}",
+            status=Post.Status.DRAFT,
+        )
+        self.client.force_login(self.regular_user)
+
+        listing = self.client.get(reverse("blog:dashboard-posts"))
+        published_detail = self.client.get(
+            reverse("blog:dashboard-post-detail", args=[published.pk])
+        )
+        draft_detail = self.client.get(
+            reverse("blog:dashboard-post-detail", args=[draft.pk])
+        )
+        update = self.client.put(
+            reverse("blog:dashboard-post-detail", args=[published.pk]),
+            data={"title": "변경 시도"},
+            content_type="application/json",
+        )
+        delete = self.client.delete(
+            reverse("blog:dashboard-post-detail", args=[published.pk])
+        )
+
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(
+            [item["title"] for item in listing.json()["items"]],
+            ["공개 게시글"],
+        )
+        self.assertEqual(published_detail.status_code, 200)
+        self.assertEqual(draft_detail.status_code, 404)
+        self.assertEqual(update.status_code, 403)
+        self.assertEqual(delete.status_code, 403)
+        self.assertTrue(Post.objects.filter(pk=published.pk).exists())
+
+    def test_regular_user_can_view_categories_without_draft_information(self):
+        public_category = Category.objects.create(name="공개 카테고리")
+        private_category = Category.objects.create(name="비공개 카테고리")
+        Post.objects.create(
+            title="공개 게시글",
+            author=self.admin,
+            category=public_category,
+            content="{}",
+            status=Post.Status.PUBLISHED,
+        )
+        Post.objects.create(
+            title="같은 카테고리 초안",
+            author=self.admin,
+            category=public_category,
+            content="{}",
+            status=Post.Status.DRAFT,
+        )
+        Post.objects.create(
+            title="비공개 카테고리 초안",
+            author=self.admin,
+            category=private_category,
+            content="{}",
+            status=Post.Status.DRAFT,
+        )
+        self.client.force_login(self.regular_user)
+
+        current_user = self.client.get(reverse("blog:dashboard-current-user"))
+        response = self.client.get(reverse("blog:dashboard-categories"))
+
+        self.assertTrue(current_user.json()["permissions"]["viewCategories"])
+        self.assertFalse(current_user.json()["permissions"]["viewDraftPosts"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["items"], [{
+            "id": public_category.pk,
+            "name": "공개 카테고리",
+            "total": 1,
+            "published": 1,
+            "draft": 0,
+        }])
 
     @override_settings(DASHBOARD_LOGIN_URL="http://localhost:5174/#/login")
     def test_admin_logout_ends_session_and_redirects_to_dashboard_login(self):

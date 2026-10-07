@@ -33,6 +33,16 @@ export async function login({ account, password }) {
   }));
 }
 
+export async function signup({ name, email, password }) {
+  const csrfToken = await ensureCsrf();
+  return responseJson(await fetch("/blog/auth/signup/", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    body: JSON.stringify({ name, email, password }),
+  }));
+}
+
 export async function logout() {
   const csrfToken = await ensureCsrf();
   return responseJson(await fetch("/blog/auth/logout/", {

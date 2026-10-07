@@ -8,6 +8,51 @@ def asset_upload_path(instance, filename):
     return f"blog-assets/{instance.id}.{extension}"
 
 
+class UserAccessStatus(models.Model):
+    """회원가입 승인과 이용 제한 상태를 Django 사용자와 분리해 기록합니다."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "승인 대기"
+        APPROVED = "approved", "승인"
+        BANNED = "banned", "차단"
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="사용자",
+        related_name="access_status",
+        on_delete=models.CASCADE,
+    )
+    status = models.CharField(
+        "계정 상태", max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    ban_reason = models.TextField("차단 사유", blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="처리 관리자",
+        related_name="reviewed_access_statuses",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    reviewed_at = models.DateTimeField("처리일", null=True, blank=True)
+    created_at = models.DateTimeField("가입일", auto_now_add=True)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
+
+    class Meta:
+        verbose_name = "계정 접근 상태"
+        verbose_name_plural = "계정 접근 상태"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        should_be_active = self.status == self.Status.APPROVED
+        type(self.user).objects.filter(pk=self.user_id).exclude(
+            is_active=should_be_active
+        ).update(is_active=should_be_active)
+
+    def __str__(self):
+        return f"{self.user} - {self.get_status_display()}"
+
+
 class Category(models.Model):
     """게시글을 주제별로 분류합니다."""
 

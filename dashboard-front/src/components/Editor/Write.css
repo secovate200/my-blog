@@ -67,45 +67,50 @@
   border-color: var(--header-color);
 }
 
-.blocknote-editor {
+.editorjs-dashboard {
   min-height: 0;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   margin-top: 4px;
+  padding: 18px 24px;
   border-radius: 10px;
   background: var(--third-background);
-}
-
-.blocknote-editor .bn-container,
-.blocknote-editor .bn-editor {
-  min-height: 100%;
-}
-
-.blocknote-editor .bn-container {
-  height: 100%;
-  overflow-y: auto;
+  color: var(--text-color);
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 
-.blocknote-editor .bn-editor {
-  padding: 22px 28px;
-  background: var(--third-background);
-  font-weight: 500;
+.editorjs-dashboard .codex-editor__redactor {
+  padding-bottom: 120px !important;
 }
 
-.blocknote-editor .bn-editor strong,
-.blocknote-editor .bn-editor b {
-  font-weight: 800;
+.editorjs-dashboard .ce-block__content,
+.editorjs-dashboard .ce-toolbar__content {
+  max-width: 860px;
 }
 
-.blocknote-help {
+.editorjs-dashboard .ce-header,
+.editorjs-dashboard .ce-paragraph,
+.editorjs-dashboard .cdx-block {
+  color: var(--text-color);
+}
+
+.editorjs-dashboard .ce-code__textarea,
+.editorjs-dashboard .ce-popover,
+.editorjs-dashboard .ce-inline-toolbar,
+.editorjs-dashboard .ce-settings {
+  border-color: var(--border-color);
+  background: var(--background);
+  color: var(--text-color);
+}
+
+.editorjs-help {
   padding: 10px 4px 0;
   color: var(--sub-text);
   font-size: 0.64rem;
 }
 
-.blocknote-help kbd {
+.editorjs-help kbd {
   display: inline-grid;
   place-items: center;
   min-width: 22px;
@@ -180,7 +185,7 @@
 @media (max-width: 640px) {
   .write-panel { margin-top: 0; }
   .write-document { min-height: 560px; padding: 16px; }
-  .blocknote-editor .bn-editor { padding: 16px; }
+  .editorjs-dashboard { padding: 12px; }
   .write-submit-bar { align-items: stretch; flex-wrap: wrap; padding: 12px; }
   .write-category, .write-tags, .write-visibility { width: 100%; flex-basis: 100%; }
   .write-message { order: 3; flex-basis: 100%; text-align: left; }
