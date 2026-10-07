@@ -64,7 +64,12 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
-    'simpleui',
+    'django_smartbase_admin',
+    'easy_thumbnails',
+    'widget_tweaks',
+    'ckeditor',
+    'ckeditor_uploader',
+    'nested_admin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -78,6 +83,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -158,27 +164,10 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+CKEDITOR_UPLOAD_PATH = 'ckeditor/'
 
-# Django SimpleUI admin theme
-SIMPLEUI_HOME_TITLE = 'My Blog 관리'
-SIMPLEUI_HOME_ICON = 'fas fa-chart-line'
-SIMPLEUI_INDEX = '/'
-SIMPLEUI_HOME_INFO = False
-SIMPLEUI_HOME_QUICK = True
-SIMPLEUI_HOME_ACTION = True
-SIMPLEUI_ANALYSIS = False
-SIMPLEUI_STATIC_OFFLINE = True
-SIMPLEUI_LOGIN_PARTICLES = False
-
-SIMPLEUI_ICON = {
-    '카테고리': 'fas fa-folder-open',
-    '태그': 'fas fa-tags',
-    '게시글': 'fas fa-pen-nib',
-    '프로젝트': 'fas fa-diagram-project',
-    '프로젝트 멤버': 'fas fa-user-shield',
-    '프로젝트 글': 'fas fa-file-lines',
-    '문의': 'fas fa-envelope',
-}
+# Django SmartBase Admin
+SB_ADMIN_CONFIGURATION = 'config.sbadmin_config.SBAdminConfiguration'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -211,8 +200,3 @@ REST_FRAMEWORK = {
         'contact': '5/hour',
     },
 }
-
-# SimpleUI removes Django's named XFrameOptionsMiddleware at startup. The
-# project-specific SameOriginFrameProtectionMiddleware enforces equivalent,
-# stricter same-origin headers, so Django's name-based deploy check is redundant.
-SILENCED_SYSTEM_CHECKS = ['security.W002']

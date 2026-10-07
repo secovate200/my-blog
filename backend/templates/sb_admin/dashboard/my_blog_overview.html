@@ -1,0 +1,77 @@
+<div class="blog-dashboard">
+    <header class="blog-dashboard__hero">
+        <div>
+            <span class="blog-dashboard__eyebrow">MY BLOG ADMIN</span>
+            <h1>{{ display_name }}님, 안녕하세요.</h1>
+            <p>콘텐츠 발행 현황과 처리할 작업을 한곳에서 확인하세요.</p>
+        </div>
+        {% if is_superuser %}
+            <a class="blog-dashboard__primary-action" href="{% url 'sb_admin:blog_post_add' %}"><span>+</span> 새 게시글</a>
+        {% else %}
+            <a class="blog-dashboard__primary-action" href="{% url 'sb_admin:blog_projectpost_add' %}"><span>+</span> 프로젝트 글</a>
+        {% endif %}
+    </header>
+
+    <section class="blog-dashboard__stats" aria-label="운영 현황">
+        {% for stat in stats %}
+            <a href="{{ stat.url }}" class="blog-dashboard__stat blog-dashboard__stat--{{ stat.tone }}">
+                <span class="blog-dashboard__stat-mark"></span>
+                <span class="blog-dashboard__stat-copy"><span>{{ stat.label }}</span><strong>{{ stat.value }}</strong></span>
+                <span class="blog-dashboard__stat-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+            </a>
+        {% endfor %}
+    </section>
+
+    <div class="blog-dashboard__main-grid">
+        <section class="blog-dashboard__panel blog-dashboard__activity">
+            <div class="blog-dashboard__panel-head">
+                <div><span class="blog-dashboard__section-label">RECENT ACTIVITY</span><h2>{{ recent_title }}</h2></div>
+                {% if is_superuser %}
+                    <a href="{% url 'sb_admin:blog_post_changelist' %}">전체 보기 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+                {% else %}
+                    <a href="{% url 'sb_admin:blog_projectpost_changelist' %}">전체 보기 <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+                {% endif %}
+            </div>
+            <div class="blog-dashboard__table-head"><span>제목</span><span>구분</span><span>작성일</span><span></span></div>
+            <div class="blog-dashboard__rows">
+                {% for post in recent_posts %}
+                    <div class="blog-dashboard__row">
+                        <div class="blog-dashboard__post-title"><span class="blog-dashboard__document-icon">▤</span><strong>{{ post.title }}</strong></div>
+                        <span class="blog-dashboard__badge">{% if post.project %}{{ post.project.title }}{% elif post.category %}{{ post.category.name }}{% else %}미분류{% endif %}</span>
+                        <time>{{ post.created_at|date:"Y.m.d" }}</time>
+                        {% if is_superuser %}
+                            <a class="blog-dashboard__edit" href="{% url 'sb_admin:blog_post_change' post.pk %}">편집</a>
+                        {% else %}
+                            <a class="blog-dashboard__edit" href="{% url 'sb_admin:blog_projectpost_change' post.pk %}">편집</a>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="blog-dashboard__empty"><span>▤</span><strong>아직 작성된 글이 없습니다.</strong><p>빠른 실행에서 첫 콘텐츠를 작성해 보세요.</p></div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <aside class="blog-dashboard__side">
+            <section class="blog-dashboard__panel blog-dashboard__quick-actions">
+                <div class="blog-dashboard__panel-head"><div><span class="blog-dashboard__section-label">SHORTCUTS</span><h2>빠른 실행</h2></div></div>
+                <div class="blog-dashboard__action-list">
+                    {% for action in quick_actions %}
+                        <a href="{{ action.url }}">
+                            <span class="blog-dashboard__action-icon">
+                                {% if action.icon == "mail" %}
+                                    <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
+                                {% elif action.icon == "project" %}
+                                    <svg viewBox="0 0 24 24"><path d="M4 7h6l2 2h8v10H4z"/></svg>
+                                {% else %}
+                                    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                                {% endif %}
+                            </span>
+                            <span><strong>{{ action.label }}</strong><small>{{ action.description }}</small></span>
+                            <b aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></b>
+                        </a>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
