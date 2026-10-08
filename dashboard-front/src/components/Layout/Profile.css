@@ -1,0 +1,204 @@
+/* Profile and quick actions panel. */
+.profile {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--text-color);
+}
+
+.profile--tools {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.profile-search {
+  min-width: 0;
+  height: 42px;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: var(--third-background);
+  color: var(--header-color);
+}
+
+.profile-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.7rem;
+}
+
+.profile-search input::placeholder {
+  color: var(--sub-text);
+}
+
+.profile-search button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--header-color);
+  cursor: pointer;
+}
+
+.profile-search:focus-within {
+  outline: 2px solid var(--header-color);
+  outline-offset: 2px;
+}
+
+.profile-theme-toggle {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: var(--third-background);
+  color: var(--header-color);
+  cursor: pointer;
+}
+
+.profile-theme-toggle:hover,
+.profile-theme-toggle:focus-visible {
+  outline: none;
+  background: var(--text-color);
+  color: var(--content-background);
+}
+
+.profile--heading {
+  margin-bottom: 1.2rem;
+  color: var(--header-color);
+  font-size: 1.25rem;
+}
+
+.profile--card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--third-background);
+  text-align: left;
+}
+
+.profile--avatar {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--header-color);
+  font-size: 1.15rem;
+}
+
+.profile--identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+}
+
+.profile--identity strong {
+  overflow: hidden;
+  color: var(--text-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile--identity span,
+.quick-action small {
+  color: var(--sub-text);
+  font-size: 0.68rem;
+}
+
+.quick-actions {
+  margin-top: 24px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.quick-actions--label {
+  margin-bottom: 12px;
+  color: var(--header-color);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.quick-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--third-background);
+  color: var(--text-color);
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.quick-action + .quick-action {
+  margin-top: 10px;
+}
+
+.quick-action:last-child {
+  margin-top: auto;
+}
+
+.quick-action:hover,
+.quick-action:focus-visible {
+  outline: none;
+  background: var(--text-color);
+  color: var(--content-background);
+}
+
+.quick-action:hover small,
+.quick-action:focus-visible small {
+  color: var(--background);
+}
+
+.quick-action--logout { color: #d94b5b; }
+.quick-action--logout .quick-action--icon { color: #d94b5b; }
+
+.quick-action--icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--header-color);
+}
+
+.quick-action > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (max-width: 850px) {
+  .profile {
+    min-height: 360px;
+  }
+}

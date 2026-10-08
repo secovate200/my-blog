@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+import json
 import tempfile
 from unittest.mock import patch
 
@@ -8,8 +10,9 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .content import sanitize_content
-from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectPost, Tag
+from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectMember, ProjectPost, Tag, UserAccessStatus
 from .notifications import send_contact_receipt, send_contact_reply
+from .tasks import _run_contact_reply
 
 
 class RichContentTests(TestCase):
@@ -35,6 +38,40 @@ class RichContentTests(TestCase):
             )
 
             self.assertIn(f'"level":{level}', sanitize_content(content))
+
+    def test_heading_tool_aliases_are_normalized(self):
+        for level in range(1, 7):
+            content = json.dumps({"blocks": [{"type": f"heading{level}", "data": {"text": "제목"}}]})
+
+            sanitized = sanitize_content(content)
+
+            self.assertIn('"type":"header"', sanitized)
+            self.assertIn(f'"level":{level}', sanitized)
+
+    def test_extended_editor_blocks_are_preserved(self):
+        content = json.dumps({
+            "blocks": [
+                {"type": "checklist", "data": {"items": [{"text": "<mark>확인</mark>", "checked": True}]}},
+                {"type": "list", "data": {"style": "checklist", "items": [{"content": "완료", "meta": {"checked": True}, "items": []}]}},
+                {"type": "table", "data": {"withHeadings": True, "content": [["제목", "값"], ["A", "B"]]}},
+                {"type": "warning", "data": {"title": "주의", "message": "확인하세요"}},
+                {"type": "embed", "data": {"service": "youtube", "source": "https://youtu.be/example", "embed": "https://www.youtube.com/embed/example", "width": 580, "height": 320, "caption": "영상"}},
+                {"type": "video", "data": {"url": "https://youtu.be/example", "caption": "영상 설명"}},
+                {"type": "linkCard", "data": {"url": "https://example.com", "title": "문서", "description": "설명"}},
+            ]
+        }, ensure_ascii=False)
+
+        sanitized = sanitize_content(content)
+
+        for block_type in ("checklist", "table", "warning", "embed", "video", "linkCard"):
+            self.assertIn(f'"type":"{block_type}"', sanitized)
+        self.assertIn('"style":"checklist"', sanitized)
+        self.assertIn('"checked":true', sanitized)
+
+    def test_unsafe_embed_is_removed(self):
+        content = '{"blocks":[{"type":"embed","data":{"embed":"https://evil.example/embed"}}]}'
+
+        self.assertNotIn('"type":"embed"', sanitize_content(content))
 
     def test_quote_trailing_empty_lines_are_removed(self):
         content = (
@@ -89,9 +126,396 @@ class BlogAssetTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json()["success"], 1)
                 asset = BlogAsset.objects.get()
+                self.assertEqual(
+                    response.json()["file"]["url"],
+                    reverse("blog:asset-download", args=[asset.pk]),
+                )
                 download = self.client.get(reverse("blog:asset-download", args=[asset.pk]))
                 self.assertEqual(download.status_code, 200)
                 self.assertIn("attachment", download["Content-Disposition"])
+
+    def test_missing_attachment_file_returns_404(self):
+        user = get_user_model().objects.create_superuser(
+            username="missing-asset-admin", email="missing@example.com", password="password"
+        )
+        asset = BlogAsset.objects.create(
+            file="blog-assets/missing.pdf",
+            original_name="missing.pdf",
+            content_type="application/pdf",
+            size=10,
+            kind=BlogAsset.Kind.FILE,
+            uploaded_by=user,
+        )
+
+        response = self.client.get(reverse("blog:asset-download", args=[asset.pk]))
+
+        self.assertEqual(response.status_code, 404)
+
+
+class DashboardAuthenticationTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_superuser(
+            username="dashboard-admin",
+            email="dashboard@example.com",
+            password="secure-password",
+        )
+        self.regular_user = get_user_model().objects.create_user(
+            username="regular-user",
+            password="secure-password",
+        )
+
+    def test_csrf_endpoint_sets_cookie(self):
+        response = self.client.get(reverse("blog:dashboard-csrf"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrftoken", response.cookies)
+
+    @patch("blog.views.enqueue_signup_notification")
+    def test_signup_queues_discord_notification_after_commit(self, enqueue):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("blog:dashboard-signup"),
+                data={
+                    "name": "신규 사용자",
+                    "email": "new-user@example.com",
+                    "password": "A-secure-password-123!",
+                },
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 201)
+        user = get_user_model().objects.get(email="new-user@example.com")
+        enqueue.assert_called_once_with(user.pk)
+
+    @patch("blog.signals.enqueue_account_approval_email")
+    def test_approval_queues_email_after_commit(self, enqueue):
+        access_status = self.regular_user.access_status
+        access_status.status = UserAccessStatus.Status.PENDING
+        access_status.save()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            access_status.status = UserAccessStatus.Status.APPROVED
+            access_status.save()
+
+        enqueue.assert_called_once_with(self.regular_user.pk)
+
+    def test_staff_user_can_login_with_username_and_read_session(self):
+        response = self.client.post(
+            reverse("blog:dashboard-login"),
+            data={"account": "dashboard-admin", "password": "secure-password"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["username"], "dashboard-admin")
+        current = self.client.get(reverse("blog:dashboard-current-user"))
+        self.assertEqual(current.status_code, 200)
+        self.assertTrue(current.json()["is_superuser"])
+
+    def test_staff_user_can_login_with_email(self):
+        response = self.client.post(
+            reverse("blog:dashboard-login"),
+            data={"account": "dashboard@example.com", "password": "secure-password"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_authenticated_user_can_change_password_and_keep_session(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "secure-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "New-secure-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.regular_user.refresh_from_db()
+        self.assertTrue(self.regular_user.check_password("New-secure-password-123!"))
+        self.assertEqual(
+            self.client.get(reverse("blog:dashboard-current-user")).status_code,
+            200,
+        )
+
+    def test_password_change_rejects_incorrect_current_password(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "incorrect-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "New-secure-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.regular_user.refresh_from_db()
+        self.assertTrue(self.regular_user.check_password("secure-password"))
+
+    def test_password_change_rejects_mismatched_confirmation(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "secure-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "Different-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_password_change_requires_authentication(self):
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "secure-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "New-secure-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_regular_user_can_login_to_dashboard_without_admin_access(self):
+        response = self.client.post(
+            reverse("blog:dashboard-login"),
+            data={"account": "regular-user", "password": "secure-password"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["is_staff"])
+        self.assertEqual(response.json()["role"], "사용자")
+
+    def test_dashboard_summary_uses_database_counts_and_recent_posts(self):
+        category = Category.objects.create(name="Database")
+        Post.objects.create(
+            title="DB 게시글",
+            author=self.admin,
+            category=category,
+            content="{}",
+            status=Post.Status.PUBLISHED,
+        )
+        project = Project.objects.create(title="연구", description="테스트")
+        ProjectMember.objects.create(project=project, user=self.regular_user, granted_by=self.admin)
+        ProjectPost.objects.create(
+            project=project,
+            author=self.admin,
+            title="연구 글",
+            content="{}",
+        )
+        self.regular_user.user_permissions.add(*Permission.objects.filter(
+            content_type__app_label="blog",
+            codename__in=["view_category", "view_post", "view_project", "view_projectpost"],
+        ))
+        self.client.force_login(self.regular_user)
+
+        response = self.client.get(reverse("blog:dashboard-summary"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["counts"], {
+            "categories": 1,
+            "posts": 1,
+            "researchPosts": 1,
+        })
+        self.assertEqual(response.json()["recentPosts"][0]["title"], "DB 게시글")
+        projects = self.client.get(reverse("blog:dashboard-projects"))
+        self.assertEqual([item["name"] for item in projects.json()["items"]], ["연구"])
+
+    def test_dashboard_posts_can_be_searched(self):
+        category = Category.objects.create(name="검색 카테고리")
+        matching = Post.objects.create(
+            title="고유한 대시보드 검색 제목",
+            author=self.admin,
+            category=category,
+            content="검색할 수 있는 본문",
+            status=Post.Status.DRAFT,
+        )
+        matching.tags.add(Tag.objects.create(name="관리검색태그"))
+        other_category = Category.objects.create(name="기타")
+        Post.objects.create(
+            title="관련 없는 글",
+            author=self.admin,
+            category=other_category,
+            content="다른 내용",
+            status=Post.Status.PUBLISHED,
+        )
+        self.client.force_login(self.admin)
+
+        for query in ["대시보드 검색", "검색할 수 있는", "검색 카테고리", "관리검색태그"]:
+            with self.subTest(query=query):
+                response = self.client.get(
+                    reverse("blog:dashboard-posts"),
+                    {"q": query},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    [post["id"] for post in response.json()["items"]],
+                    [matching.pk],
+                )
+
+    def test_dashboard_summary_is_empty_for_regular_user_without_project(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.get(reverse("blog:dashboard-summary"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["counts"], {
+            "categories": 0,
+            "posts": 0,
+            "researchPosts": 0,
+        })
+        self.assertEqual(response.json()["recentPosts"], [])
+
+    def test_user_without_group_permission_cannot_read_posts(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.get(reverse("blog:dashboard-posts"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["items"], [])
+
+    def test_regular_user_can_only_read_published_posts(self):
+        category = Category.objects.create(name="공개 범위")
+        published = Post.objects.create(
+            title="공개 게시글",
+            author=self.admin,
+            category=category,
+            content="{}",
+            status=Post.Status.PUBLISHED,
+        )
+        draft = Post.objects.create(
+            title="비공개 게시글",
+            author=self.admin,
+            category=category,
+            content="{}",
+            status=Post.Status.DRAFT,
+        )
+        self.client.force_login(self.regular_user)
+
+        listing = self.client.get(reverse("blog:dashboard-posts"))
+        published_detail = self.client.get(
+            reverse("blog:dashboard-post-detail", args=[published.pk])
+        )
+        draft_detail = self.client.get(
+            reverse("blog:dashboard-post-detail", args=[draft.pk])
+        )
+        update = self.client.put(
+            reverse("blog:dashboard-post-detail", args=[published.pk]),
+            data={"title": "변경 시도"},
+            content_type="application/json",
+        )
+        delete = self.client.delete(
+            reverse("blog:dashboard-post-detail", args=[published.pk])
+        )
+
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(
+            [item["title"] for item in listing.json()["items"]],
+            ["공개 게시글"],
+        )
+        self.assertEqual(published_detail.status_code, 200)
+        self.assertEqual(draft_detail.status_code, 404)
+        self.assertEqual(update.status_code, 403)
+        self.assertEqual(delete.status_code, 403)
+        self.assertTrue(Post.objects.filter(pk=published.pk).exists())
+
+    def test_regular_user_can_view_categories_without_draft_information(self):
+        public_category = Category.objects.create(name="공개 카테고리")
+        private_category = Category.objects.create(name="비공개 카테고리")
+        Post.objects.create(
+            title="공개 게시글",
+            author=self.admin,
+            category=public_category,
+            content="{}",
+            status=Post.Status.PUBLISHED,
+        )
+        Post.objects.create(
+            title="같은 카테고리 초안",
+            author=self.admin,
+            category=public_category,
+            content="{}",
+            status=Post.Status.DRAFT,
+        )
+        Post.objects.create(
+            title="비공개 카테고리 초안",
+            author=self.admin,
+            category=private_category,
+            content="{}",
+            status=Post.Status.DRAFT,
+        )
+        self.client.force_login(self.regular_user)
+
+        current_user = self.client.get(reverse("blog:dashboard-current-user"))
+        response = self.client.get(reverse("blog:dashboard-categories"))
+
+        self.assertTrue(current_user.json()["permissions"]["viewCategories"])
+        self.assertFalse(current_user.json()["permissions"]["viewDraftPosts"])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["items"], [{
+            "id": public_category.pk,
+            "name": "공개 카테고리",
+            "total": 1,
+            "published": 1,
+            "draft": 0,
+        }])
+
+    @override_settings(DASHBOARD_LOGIN_URL="http://localhost:5174/#/login")
+    def test_admin_logout_ends_session_and_redirects_to_dashboard_login(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(reverse("dashboard-admin-logout"))
+
+        self.assertRedirects(
+            response,
+            "http://localhost:5174/#/login",
+            fetch_redirect_response=False,
+        )
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    @override_settings(DASHBOARD_LOGIN_URL="http://localhost:5174/#/login")
+    def test_admin_login_redirects_to_dashboard_login(self):
+        response = self.client.get(reverse("dashboard-admin-login"))
+
+        self.assertRedirects(
+            response,
+            "http://localhost:5174/#/login",
+            fetch_redirect_response=False,
+        )
+
+    @override_settings(DASHBOARD_FORBIDDEN_URL="http://localhost:5174/#/403")
+    def test_non_staff_admin_access_redirects_to_dashboard_forbidden_page(self):
+        self.client.force_login(self.regular_user)
+
+        admin_response = self.client.get(reverse("admin:index"))
+        self.assertEqual(admin_response.status_code, 302)
+
+        response = self.client.get(admin_response["Location"])
+
+        self.assertRedirects(
+            response,
+            "http://localhost:5174/#/403",
+            fetch_redirect_response=False,
+        )
+
+    def test_logout_clears_dashboard_session(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse("blog:dashboard-logout"))
+
+        self.assertEqual(response.status_code, 200)
+        current = self.client.get(reverse("blog:dashboard-current-user"))
+        self.assertEqual(current.status_code, 401)
 
 
 class PostPaginationTests(TestCase):
@@ -146,6 +570,22 @@ class PostPaginationTests(TestCase):
                 for post in response.json()["results"]
             )
         )
+
+    def test_draft_post_is_hidden_from_public_list_and_detail(self):
+        draft = Post.objects.create(
+            title="Private Draft",
+            author=get_user_model().objects.get(username="author"),
+            category=Category.objects.get(name="Pagination Test"),
+            content="외부에 공개하면 안 되는 내용",
+            status=Post.Status.DRAFT,
+        )
+
+        list_response = self.client.get(reverse("blog:post-list"), {"q": "Private Draft"})
+        detail_response = self.client.get(reverse("blog:post-detail", args=[draft.pk]))
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(list_response.json()["count"], 0)
+        self.assertEqual(detail_response.status_code, 404)
 
     def test_post_list_can_search_title_content_category_and_tag(self):
         tag = Tag.objects.create(name="SearchableTag")
@@ -269,28 +709,49 @@ class ProjectApiTests(TestCase):
 
 
 class ContactMessageTests(TestCase):
-    @patch("blog.views.send_contact_notification", return_value=True)
-    @patch("blog.views.send_contact_receipt", return_value=True)
-    def test_contact_message_is_saved_and_notified(self, receipt, notify):
-        response = self.client.post(
-            reverse("blog:contact-create"),
-            {
-                "name": "방문자",
-                "email": "visitor@example.com",
-                "message": "블로그 문의입니다.",
-            },
+    @patch("blog.tasks.send_contact_reply", return_value=True)
+    def test_background_reply_marks_contact_as_replied_after_email_succeeds(self, send_reply):
+        admin = get_user_model().objects.create_superuser(
+            username="reply-admin",
+            email="reply-admin@example.com",
+            password="password",
+        )
+        contact = ContactMessage.objects.create(
+            name="방문자",
+            email="visitor@example.com",
+            message="문의 내용",
+            reply="답변 내용",
+            status=ContactMessage.Status.IN_PROGRESS,
         )
 
-        self.assertEqual(response.status_code, 201)
-        self.assertTrue(response.json()["notification_sent"])
-        self.assertTrue(response.json()["receipt_sent"])
-        self.assertEqual(ContactMessage.objects.count(), 1)
-        notify.assert_called_once_with(ContactMessage.objects.get())
-        receipt.assert_called_once_with(ContactMessage.objects.get())
+        _run_contact_reply(contact.pk, admin.pk)
 
-    @patch("blog.views.send_contact_notification", return_value=True)
-    @patch("blog.views.send_contact_receipt", return_value=True)
-    def test_logged_in_admin_can_submit_without_csrf_token(self, receipt, notify):
+        contact.refresh_from_db()
+        send_reply.assert_called_once()
+        self.assertEqual(contact.status, ContactMessage.Status.REPLIED)
+        self.assertEqual(contact.replied_by, admin)
+        self.assertIsNotNone(contact.replied_at)
+        self.assertIsNotNone(contact.email_sent_at)
+
+    @patch("blog.views.enqueue_contact_notifications")
+    def test_contact_message_is_saved_and_notifications_are_queued(self, enqueue):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("blog:contact-create"),
+                {
+                    "name": "방문자",
+                    "email": "visitor@example.com",
+                    "message": "블로그 문의입니다.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()["notifications_queued"])
+        self.assertEqual(ContactMessage.objects.count(), 1)
+        enqueue.assert_called_once_with(ContactMessage.objects.get().pk)
+
+    @patch("blog.views.enqueue_contact_notifications")
+    def test_logged_in_admin_can_submit_without_csrf_token(self, enqueue):
         user = get_user_model().objects.create_superuser(
             username="admin",
             email="admin@example.com",
@@ -299,22 +760,21 @@ class ContactMessageTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         client.force_login(user)
 
-        response = client.post(
-            reverse("blog:contact-create"),
-            {
-                "name": "관리자",
-                "email": "admin@example.com",
-                "message": "로그인 상태에서 보낸 문의입니다.",
-            },
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = client.post(
+                reverse("blog:contact-create"),
+                {
+                    "name": "관리자",
+                    "email": "admin@example.com",
+                    "message": "로그인 상태에서 보낸 문의입니다.",
+                },
+            )
 
         self.assertEqual(response.status_code, 201)
-        notify.assert_called_once_with(ContactMessage.objects.get())
-        receipt.assert_called_once_with(ContactMessage.objects.get())
+        enqueue.assert_called_once_with(ContactMessage.objects.get().pk)
 
-    @patch("blog.views.send_contact_notification")
-    @patch("blog.views.send_contact_receipt")
-    def test_invalid_contact_message_is_rejected(self, receipt, notify):
+    @patch("blog.views.enqueue_contact_notifications")
+    def test_invalid_contact_message_is_rejected(self, enqueue):
         response = self.client.post(
             reverse("blog:contact-create"),
             {"name": "", "email": "invalid", "message": ""},
@@ -322,8 +782,7 @@ class ContactMessageTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(ContactMessage.objects.count(), 0)
-        notify.assert_not_called()
-        receipt.assert_not_called()
+        enqueue.assert_not_called()
 
     @override_settings(
         EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",

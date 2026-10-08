@@ -61,6 +61,90 @@ def send_contact_notification(contact):
         return False
 
 
+def send_signup_notification(user):
+    """신규 회원가입 승인 요청을 Discord 관리자 채널로 알립니다."""
+    webhook_url = settings.DISCORD_SIGNUP_WEBHOOK_URL
+    if not webhook_url:
+        return False
+
+    payload = {
+        "username": "My Blog Account",
+        "allowed_mentions": {"parse": []},
+        "embeds": [
+            {
+                "title": "새 회원가입 승인 요청",
+                "color": 0xF0A020,
+                "fields": [
+                    {"name": "이름", "value": user.get_full_name() or "-", "inline": True},
+                    {"name": "이메일", "value": user.email, "inline": True},
+                    {"name": "상태", "value": "승인 대기", "inline": True},
+                ],
+                "footer": {"text": f"사용자 #{user.pk}"},
+                "timestamp": timezone.now().isoformat(),
+            }
+        ],
+    }
+    request = Request(
+        webhook_url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "User-Agent": "my-blog/1.0"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=5) as response:
+            return 200 <= response.status < 300
+    except (HTTPError, URLError, TimeoutError, OSError):
+        logger.exception("Discord signup notification failed for user %s", user.pk)
+        return False
+
+
+def send_account_approval_email(user):
+    """관리자 승인이 완료된 사용자에게 로그인 가능 상태를 안내합니다."""
+    if not settings.EMAIL_HOST or not settings.DEFAULT_FROM_EMAIL or not user.email:
+        return False
+
+    name = escape(user.get_full_name() or user.email)
+    login_url = escape(settings.DASHBOARD_LOGIN_URL)
+    subject = "[SECOVATE200 BLOG] 계정 승인이 완료되었습니다"
+    text_body = (
+        f"{user.get_full_name() or user.email}님, 안녕하세요.\n\n"
+        "회원가입 승인이 완료되어 이제 대시보드에 로그인할 수 있습니다.\n"
+        f"로그인: {settings.DASHBOARD_LOGIN_URL}\n\n"
+        "SECOVATE200 BLOG"
+    )
+    html_body = f"""
+    <!doctype html>
+    <html lang="ko">
+      <body style="margin:0;background:#f4f5f7;font-family:Arial,'Noto Sans KR',sans-serif;color:#20242a;">
+        <div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+          <div style="background:#ffffff;border:1px solid #e4e7eb;padding:36px;text-align:center;">
+            <img src="cid:secovate200-logo" alt="SECOVATE200 로고" width="120"
+                 style="display:block;width:120px;height:auto;margin:0 auto 24px;">
+            <p style="margin:0 0 8px;color:#22a06b;font-size:12px;letter-spacing:2px;">ACCOUNT APPROVED</p>
+            <h1 style="margin:0 0 20px;font-size:24px;line-height:1.4;">계정 승인이 완료되었습니다</h1>
+            <p style="margin:0 0 22px;font-size:15px;line-height:1.8;">{name}님, 이제 대시보드에 로그인할 수 있습니다.</p>
+            <a href="{login_url}" style="display:inline-block;padding:13px 24px;background:#20242a;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:bold;">로그인하기</a>
+          </div>
+          <p style="margin:18px 0 0;text-align:center;color:#98a2b3;font-size:11px;">SECOVATE200 BLOG</p>
+        </div>
+      </body>
+    </html>
+    """
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[user.email],
+    )
+    email.attach_alternative(html_body, "text/html")
+    try:
+        attach_inline_logo(email)
+        email.send(fail_silently=False)
+        return True
+    except (BadHeaderError, OSError, smtplib.SMTPException, ValueError):
+        logger.exception("Account approval email failed for user %s", user.pk)
+        return False
+
 def send_contact_receipt(contact):
     """문의자에게 로고가 포함된 접수 확인 메일을 보냅니다."""
     if not settings.EMAIL_HOST or not settings.DEFAULT_FROM_EMAIL:

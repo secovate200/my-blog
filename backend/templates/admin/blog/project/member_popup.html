@@ -1,0 +1,26 @@
+{% extends "sb_admin/partials/modal/modal_content.html" %}
+
+{% block modal_title %}프로젝트 멤버 추가{% endblock %}
+
+{% block modal_body %}
+    <div class="project-member-popup"
+         data-project-member-popup
+         data-project-id="{{ project.pk }}"
+         data-search-url="{{ search_url }}"
+         data-add-url="{{ add_url }}">
+        <p class="project-member-popup__description">사용자 이름 또는 이메일로 검색하세요.</p>
+        <div class="project-member-search__controls">
+            <input class="input"
+                   type="search"
+                   autocomplete="off"
+                   placeholder="사용자 이름 또는 이메일">
+            <button type="button" class="btn btn-primary" data-member-search-button>검색</button>
+        </div>
+        <div class="project-member-search__status" data-member-search-status aria-live="polite"></div>
+        <ul class="project-member-search__results" data-member-search-results></ul>
+    </div>
+{% endblock %}
+
+{% block modal_footer %}
+    <button type="button" class="btn" data-bs-dismiss="modal">닫기</button>
+{% endblock %}

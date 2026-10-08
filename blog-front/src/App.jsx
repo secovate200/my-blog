@@ -13,6 +13,7 @@ import Navbar from "./Components/Navbar";
 import Profile from "./Components/Profile";
 import { ClientError, ServerError } from "./Container/Error";
 import { Route, Routes, useLocation } from "react-router-dom";
+import { getInitialTheme, getSharedTheme, saveTheme } from "./utils/theme";
 import "./App.css";
 
 const PAGE_PATHS = [
@@ -22,17 +23,8 @@ const PAGE_PATHS = [
   /^\/project\/\d+\/post\/\d+\/?$/,
   /^\/error\/\d{3}\/?$/,
 ];
-const THEME_STORAGE_KEY = "blog-theme";
-
-function getStoredTheme() {
-  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-  return storedTheme === "dark" || storedTheme === "light"
-    ? storedTheme
-    : "light";
-}
-
 function App() {
-  const [theme, setTheme] = useState(getStoredTheme);
+  const [theme, setTheme] = useState(getInitialTheme);
   const [httpError, setHttpError] = useState(null);
   const location = useLocation();
   const postMatch = location.pathname.match(/^\/post\/(\d+)\/?$/);
@@ -44,8 +36,28 @@ function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    const syncTheme = () => {
+      const sharedTheme = getSharedTheme();
+      if (sharedTheme === "light" || sharedTheme === "dark") {
+        setTheme((current) => current === sharedTheme ? current : sharedTheme);
+      }
+    };
+
+    const intervalId = window.setInterval(syncTheme, 1000);
+    window.addEventListener("focus", syncTheme);
+    window.addEventListener("storage", syncTheme);
+    document.addEventListener("visibilitychange", syncTheme);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", syncTheme);
+      window.removeEventListener("storage", syncTheme);
+      document.removeEventListener("visibilitychange", syncTheme);
+    };
+  }, []);
 
   useEffect(() => {
     const handleHttpError = (event) => {

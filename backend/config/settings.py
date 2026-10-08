@@ -51,11 +51,23 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'DJANGO_CSRF_TRUSTED_ORIGINS',
+        'http://localhost:5175,http://127.0.0.1:5175',
+    ).split(',')
+    if origin.strip()
+]
+
 
 # Application definition
 
 INSTALLED_APPS = [
-    'simpleui',
+    'django_smartbase_admin',
+    'easy_thumbnails',
+    'widget_tweaks',
+    'nested_admin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -69,6 +81,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -133,7 +146,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ko'
+
+# 관리자와 서비스 UI는 한국어만 제공합니다.
+LANGUAGES = [
+    ('ko', '한국어'),
+]
 
 TIME_ZONE = 'UTC'
 
@@ -150,34 +168,27 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Django SimpleUI admin theme
-SIMPLEUI_HOME_TITLE = 'My Blog 관리'
-SIMPLEUI_HOME_ICON = 'fas fa-chart-line'
-SIMPLEUI_INDEX = '/'
-SIMPLEUI_HOME_INFO = False
-SIMPLEUI_HOME_QUICK = True
-SIMPLEUI_HOME_ACTION = True
-SIMPLEUI_ANALYSIS = False
-SIMPLEUI_STATIC_OFFLINE = True
-SIMPLEUI_LOGIN_PARTICLES = False
-
-SIMPLEUI_ICON = {
-    '카테고리': 'fas fa-folder-open',
-    '태그': 'fas fa-tags',
-    '게시글': 'fas fa-pen-nib',
-    '프로젝트': 'fas fa-diagram-project',
-    '프로젝트 멤버': 'fas fa-user-shield',
-    '프로젝트 글': 'fas fa-file-lines',
-    '문의': 'fas fa-envelope',
-}
+# Django SmartBase Admin
+SB_ADMIN_CONFIGURATION = 'config.sbadmin_config.SBAdminConfiguration'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Discord 웹훅 URL은 저장소에 기록하지 않고 실행 환경에서만 주입합니다.
+DASHBOARD_LOGIN_URL = os.environ.get(
+    'DASHBOARD_LOGIN_URL',
+    'http://localhost:5175/#/login',
+)
+DASHBOARD_FORBIDDEN_URL = os.environ.get(
+    'DASHBOARD_FORBIDDEN_URL',
+    'http://localhost:5175/#/403',
+)
+
+# 문의 알림과 회원가입 알림은 서로 다른 Discord 채널로 보낼 수 있습니다.
+# 기존 DISCORD_WEBHOOK_URL은 문의 알림용으로 유지합니다.
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL', '')
+DISCORD_SIGNUP_WEBHOOK_URL = os.environ.get('DISCORD_SIGNUP_WEBHOOK_URL', '')
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
@@ -193,8 +204,3 @@ REST_FRAMEWORK = {
         'contact': '5/hour',
     },
 }
-
-# SimpleUI removes Django's named XFrameOptionsMiddleware at startup. The
-# project-specific SameOriginFrameProtectionMiddleware enforces equivalent,
-# stricter same-origin headers, so Django's name-based deploy check is redundant.
-SILENCED_SYSTEM_CHECKS = ['security.W002']

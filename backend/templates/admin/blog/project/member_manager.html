@@ -1,0 +1,38 @@
+<div class="project-member-manager"
+     data-project-member-manager
+     data-project-id="{{ project.pk }}">
+    <div class="project-member-current">
+        <div class="project-member-current__header">
+            <div>
+                <h3 class="project-member-current__title">현재 멤버</h3>
+                <p class="project-member-manager__hint">프로젝트를 관리할 사용자를 추가하거나 제거합니다.</p>
+            </div>
+            <button type="button"
+                    class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#sb-admin-modal"
+                    hx-target="#sb-admin-modal"
+                    hx-get="{{ popup_url }}">멤버 추가</button>
+        </div>
+        <p class="project-member-current__empty{% if memberships %} hidden{% endif %}" data-member-empty>
+            아직 추가된 멤버가 없습니다.
+        </p>
+        <ul class="project-member-current__list" data-member-list>
+            {% for membership in memberships %}
+                <li class="project-member-row" data-membership-id="{{ membership.pk }}">
+                    <div>
+                        <strong>{{ membership.user.username }}</strong>
+                        {% if membership.user.email %}<span>{{ membership.user.email }}</span>{% endif %}
+                    </div>
+                    <button type="button"
+                            class="btn btn-small"
+                            data-member-remove
+                            data-remove-url="{% url 'admin:blog_project_members_remove' project.pk membership.pk %}">
+                        제거
+                    </button>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+</div>

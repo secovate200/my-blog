@@ -1,0 +1,392 @@
+/* 4K and ultra-wide desktop
+   Keep the interface readable without stretching tables across the full panel. */
+@media (min-width: 2200px) {
+  html {
+    font-size: 18px;
+  }
+
+  body {
+    padding: 32px;
+  }
+
+  .dashboard {
+    width: min(100%, 2600px);
+    min-height: calc(100vh - 64px);
+    margin: 0 auto;
+    gap: 28px;
+  }
+
+  .menu {
+    flex: 0 0 280px;
+  }
+
+  .logo {
+    padding: 26px 20px;
+  }
+
+  .logo h2 {
+    font-size: 1.45rem;
+  }
+
+  .menu--list {
+    gap: 24px;
+  }
+
+  .menu--list .item {
+    min-height: 52px;
+    padding: 12px 16px;
+    font-size: 1.05rem;
+  }
+
+  .dashboard--content {
+    grid-template-columns: minmax(0, 3.4fr) minmax(340px, 1fr);
+    gap: 2rem;
+    padding: 2.75rem;
+    border-radius: 24px;
+    align-self: start;
+  }
+
+  .card--container {
+    gap: 28px;
+  }
+
+  .card,
+  .table-list,
+  .profile {
+    padding: 26px;
+  }
+
+  .table-list,
+  .table-list--scroll,
+  .post-list--body,
+  .post-list--body .post-list--row {
+    flex: none;
+  }
+
+  .card--cover {
+    min-width: 88px;
+    min-height: 88px;
+  }
+
+  .post-list--body .post-list--row {
+    min-height: 66px;
+  }
+
+  .profile-search,
+  .profile-theme-toggle {
+    height: 48px;
+  }
+
+  .profile-theme-toggle {
+    width: 48px;
+    flex-basis: 48px;
+  }
+
+  .profile {
+    align-self: start;
+  }
+
+  .quick-actions {
+    flex: none;
+  }
+
+  .quick-action:last-child {
+    margin-top: 24px;
+  }
+}
+
+/* Large laptop */
+@media (max-width: 1400px) {
+  body {
+    padding: 16px;
+  }
+
+  .dashboard {
+    gap: 16px;
+    min-height: calc(100vh - 32px);
+  }
+
+  .dashboard--content {
+    padding: 1.5rem;
+    gap: 1.2rem;
+  }
+
+  .logo {
+    padding-inline: 12px;
+  }
+
+  .logo h2 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Keep equal page padding on short laptop screens. */
+@media (min-width: 901px) and (max-height: 750px) {
+  .card--container,
+  .table-list {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Tablet and compact laptop */
+@media (min-width: 1181px) {
+  body:has(.write-content) {
+    overflow: hidden;
+  }
+
+  body:has(.blog-detail-content),
+  body:has(.research-detail-content) {
+    overflow: hidden;
+  }
+
+  .dashboard:has(.write-content) {
+    height: calc(100vh - 40px);
+    min-height: 0;
+  }
+
+  .dashboard:has(.blog-detail-content),
+  .dashboard:has(.research-detail-content) {
+    height: calc(100vh - 40px);
+    min-height: 0;
+  }
+
+  .dashboard--content:has(.write-content) {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .dashboard--content:has(.blog-detail-content),
+  .dashboard--content:has(.research-detail-content) {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .blog-detail-content,
+  .research-detail-content,
+  .profile {
+    max-height: 100%;
+  }
+}
+
+@media (min-width: 1181px) and (max-width: 1400px) {
+  .dashboard:has(.write-content) {
+    height: calc(100vh - 32px);
+  }
+
+  .dashboard:has(.blog-detail-content),
+  .dashboard:has(.research-detail-content) {
+    height: calc(100vh - 32px);
+  }
+}
+
+/* Tablet and compact laptop */
+@media (max-width: 1180px) {
+  .dashboard--content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile {
+    min-height: auto;
+  }
+
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .quick-actions--label {
+    grid-column: 1 / -1;
+  }
+
+  .quick-action + .quick-action,
+  .quick-action:last-child {
+    margin-top: 0;
+  }
+}
+
+/* Tablet navigation */
+@media (max-width: 900px) {
+  body {
+    padding: 12px;
+  }
+
+  .dashboard {
+    flex-direction: column;
+    min-height: calc(100vh - 24px);
+  }
+
+  .menu {
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .logo {
+    padding: 10px;
+  }
+
+  .menu--list {
+    flex-direction: row;
+    gap: 6px;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-color: var(--header-color) var(--background);
+  }
+
+  .menu--list .item {
+    flex: 0 0 auto;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+
+  .dashboard--content {
+    border-radius: 16px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  body {
+    padding: 8px;
+  }
+
+  .dashboard {
+    gap: 8px;
+    min-height: calc(100vh - 16px);
+  }
+
+  .menu {
+    display: block;
+  }
+
+  .logo {
+    justify-content: center;
+    padding: 10px 8px 14px;
+  }
+
+  .menu--list {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .menu--list .item {
+    min-width: 110px;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 6px;
+    font-size: 0.78rem;
+  }
+
+  .dashboard--content {
+    padding: 1rem;
+    border-radius: 14px;
+  }
+
+  .content--header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .header--title {
+    font-size: 1.7rem;
+  }
+
+  .card--container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 1.2rem;
+  }
+
+  .card {
+    padding: 14px;
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .card--cover {
+    width: 62px;
+    min-height: 62px;
+    flex: 0 0 62px;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 1.4rem;
+  }
+
+  .card--title {
+    min-height: 62px;
+    padding: 12px;
+    text-align: left;
+  }
+
+  .card--title h2 {
+    text-align: left;
+  }
+
+  .table-list {
+    margin-top: 1.2rem;
+    padding: 12px;
+  }
+
+  .table-list--header {
+    padding: 0.8rem;
+  }
+
+  .table-list--header h2 {
+    font-size: 1rem;
+  }
+
+  .pagination {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .pagination--button {
+    flex: 0 0 auto;
+  }
+
+  .view-all {
+    padding: 0.55rem;
+    font-size: 0.72rem;
+  }
+
+  .post-list {
+    min-width: 0;
+  }
+
+  .post-list--row {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    gap: 10px;
+  }
+
+  .post-list--row > :nth-child(1),
+  .post-list--row > :nth-child(3),
+  .post-list--row > :nth-child(5) {
+    display: none;
+  }
+
+  .post-list--head,
+  .post-list--body .post-list--row {
+    padding-inline: 0.8rem;
+  }
+
+  .quick-actions {
+    display: flex;
+  }
+
+  .quick-action + .quick-action {
+    margin-top: 10px;
+  }
+
+  .quick-action:last-child {
+    margin-top: 24px;
+  }
+}

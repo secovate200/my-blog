@@ -85,7 +85,7 @@ function prepareRichContent(content = "") {
   const editorData = parseEditorContent(content);
   if (editorData) {
     const headings = editorData.blocks
-      .filter((block) => block.type === "header")
+      .filter((block) => block.type === "header" && Number(block.data?.level) <= 3)
       .map((block, index) => ({
         id: `section-${index + 1}`,
         title: block.data.text.replace(/<[^>]*>/g, "").trim() || `섹션 ${index + 1}`,
@@ -95,7 +95,7 @@ function prepareRichContent(content = "") {
   if (!isRichContent(content)) return null;
 
   const document = new DOMParser().parseFromString(content, "text/html");
-  const headings = Array.from(document.body.querySelectorAll("h2, h3, h4")).map(
+  const headings = Array.from(document.body.querySelectorAll("h1, h2, h3")).map(
     (heading, index) => {
       const id = `section-${index + 1}`;
       heading.id = id;
@@ -114,21 +114,51 @@ function trimEmptyLines(html = "") {
   return html.replace(/^(?:\s*<br\s*\/?>(?:\s*))+|(?:(?:\s*)<br\s*\/?>\s*)+$/gi, "");
 }
 
-function EditorList({ items = [], ordered = false }) {
-  const ListTag = ordered ? "ol" : "ul";
+function EditorList({ items = [], style = "unordered" }) {
+  const ListTag = style === "ordered" ? "ol" : "ul";
+  const checklist = style === "checklist";
   return (
-    <ListTag>
+    <ListTag className={checklist ? "postChecklist" : undefined}>
       {items.map((item, index) => {
         const data = typeof item === "string" ? { content: item, items: [] } : item;
         return (
-          <li key={index}>
+          <li className={checklist && data.meta?.checked ? "checked" : ""} key={index}>
+            {checklist && <span aria-hidden="true">{data.meta?.checked ? "✓" : "○"}</span>}
             <InlineContent html={data.content ?? ""} />
-            {data.items?.length > 0 && <EditorList items={data.items} ordered={ordered} />}
+            {data.items?.length > 0 && <EditorList items={data.items} style={style} />}
           </li>
         );
       })}
     </ListTag>
   );
+}
+
+function assetUrl(value = "") {
+  try {
+    const url = new URL(value, window.location.origin);
+    if (/^\/blog\/assets\/[0-9a-f-]+\/(?:content|download)\/$/i.test(url.pathname)) {
+      return `${url.pathname}${url.search}`;
+    }
+  } catch {
+    // Let the browser handle non-URL values as it did previously.
+  }
+  return value;
+}
+
+function videoEmbedUrl(value = "") {
+  try {
+    const url = new URL(value);
+    if (url.hostname === "youtu.be") return `https://www.youtube.com/embed/${url.pathname.slice(1)}`;
+    if (["youtube.com", "www.youtube.com"].includes(url.hostname)) {
+      const id = url.searchParams.get("v") || url.pathname.match(/^\/embed\/([^/]+)/)?.[1];
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (["vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
+      const id = url.pathname.match(/^\/(\d+)/)?.[1];
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+  } catch { /* invalid URL */ }
+  return "";
 }
 
 function EditorBlocks({ blocks }) {
@@ -141,7 +171,7 @@ function EditorBlocks({ blocks }) {
       return <HeadingTag id={`section-${headingIndex}`} key={index}><InlineContent html={data.text} /></HeadingTag>;
     }
     if (block.type === "paragraph") return <p key={index}><InlineContent html={data.text} /></p>;
-    if (block.type === "list") return <EditorList items={data.items} ordered={data.style === "ordered"} key={index} />;
+    if (block.type === "list") return <EditorList items={data.items} style={data.style} key={index} />;
     if (block.type === "quote") {
       const text = trimEmptyLines(data.text);
       const caption = trimEmptyLines(data.caption);
@@ -152,16 +182,30 @@ function EditorBlocks({ blocks }) {
         </blockquote>
       );
     }
+    if (block.type === "checklist") return (
+      <ul className="postChecklist" key={index}>{(data.items ?? []).map((item, itemIndex) => (
+        <li className={item.checked ? "checked" : ""} key={itemIndex}><span aria-hidden="true">{item.checked ? "✓" : "○"}</span><InlineContent html={item.text} /></li>
+      ))}</ul>
+    );
+    if (block.type === "table") return (
+      <div className="postTableWrap" key={index}><table><tbody>{(data.content ?? []).map((row, rowIndex) => (
+        <tr key={rowIndex}>{row.map((cell, cellIndex) => { const Cell = data.withHeadings && rowIndex === 0 ? "th" : "td"; return <Cell key={cellIndex}><InlineContent html={cell} /></Cell>; })}</tr>
+      ))}</tbody></table></div>
+    );
+    if (block.type === "warning") return <aside className="postWarning" key={index}><strong><InlineContent html={data.title} /></strong><p><InlineContent html={data.message} /></p></aside>;
+    if (block.type === "embed") return <figure className="postEmbed" key={index}><iframe src={data.embed} title={data.caption?.replace(/<[^>]*>/g, "") || `${data.service || "미디어"} 임베드`} loading="lazy" allowFullScreen />{data.caption && <figcaption><InlineContent html={data.caption} /></figcaption>}</figure>;
+    if (block.type === "video") { const src = videoEmbedUrl(data.url); return src ? <figure className="postEmbed" key={index}><iframe src={src} title={data.caption?.replace(/<[^>]*>/g, "") || "영상"} loading="lazy" allowFullScreen />{data.caption && <figcaption><InlineContent html={data.caption} /></figcaption>}</figure> : null; }
+    if (block.type === "linkCard") return <a className="postLinkCard" href={data.url} target="_blank" rel="noopener noreferrer" key={index}><strong><InlineContent html={data.title || data.url} /></strong>{data.description && <span><InlineContent html={data.description} /></span>}<small>{data.url}</small></a>;
     if (block.type === "code") return <pre key={index}><code>{data.code}</code></pre>;
     if (block.type === "delimiter") return <hr key={index} />;
     if (block.type === "image") return (
       <figure className={`postImage${data.withBorder ? " withBorder" : ""}${data.withBackground ? " withBackground" : ""}`} key={index}>
-        <img src={data.file?.url} alt={data.caption?.replace(/<[^>]*>/g, "") || "게시글 이미지"} loading="lazy" />
+        <img src={assetUrl(data.file?.url)} alt={data.caption?.replace(/<[^>]*>/g, "") || "게시글 이미지"} loading="lazy" />
         {data.caption && <figcaption><InlineContent html={data.caption} /></figcaption>}
       </figure>
     );
     if (block.type === "attaches") return (
-      <a className="postAttachment" href={data.file?.url} key={index}>
+      <a className="postAttachment" href={assetUrl(data.file?.url)} download key={index}>
         <span className="postAttachmentExtension">{data.file?.extension || "FILE"}</span>
         <span>
           <strong>{data.title || data.file?.name || "첨부파일"}</strong>

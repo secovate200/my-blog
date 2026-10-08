@@ -8,16 +8,21 @@ services:
       - blog-front-node-modules:/app/node_modules
     environment:
       VITE_API_PROXY_TARGET: http://backend:8000
+      VITE_DASHBOARD_URL: ${VITE_DASHBOARD_URL:-http://localhost:5175}
     depends_on:
       - backend
 
   dashboard-front:
     build: ./dashboard-front
     ports:
-      - "5174:5173"
+      - "5175:5174"
     volumes:
       - ./dashboard-front:/app
       - dashboard-front-node-modules:/app/node_modules
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    depends_on:
+      - backend
 
   backend:
     build: ./backend
@@ -27,7 +32,11 @@ services:
       - ./backend:/app
     environment:
       DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      DISCORD_SIGNUP_WEBHOOK_URL: ${DISCORD_SIGNUP_WEBHOOK_URL:-}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:5175,http://127.0.0.1:5175}
+      DASHBOARD_LOGIN_URL: ${DASHBOARD_LOGIN_URL:-http://localhost:5175/#/login}
+      DASHBOARD_FORBIDDEN_URL: ${DASHBOARD_FORBIDDEN_URL:-http://localhost:5175/#/403}
       EMAIL_HOST: ${EMAIL_HOST:-}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}

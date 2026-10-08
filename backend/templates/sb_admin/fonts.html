@@ -1,0 +1,67 @@
+{% load static %}
+
+{% block content %}
+    <script>
+        (function () {
+            const cookieName = 'secovate-theme';
+            const storageKey = 'secovate-theme';
+            const maxAge = 60 * 60 * 24 * 365;
+            const isTheme = (value) => value === 'light' || value === 'dark';
+            const readCookie = () => document.cookie
+                .split('; ')
+                .find((item) => item.startsWith(cookieName + '='))
+                ?.split('=')[1];
+            const saveTheme = (theme) => {
+                if (!isTheme(theme)) return;
+                document.cookie = `${cookieName}=${theme}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+                localStorage.setItem(storageKey, theme);
+                localStorage.removeItem('theme');
+                localStorage.removeItem('blog-theme');
+            };
+            const applySharedTheme = () => {
+                const sharedTheme = readCookie();
+                if (isTheme(sharedTheme) && document.documentElement.dataset.theme !== sharedTheme) {
+                    document.documentElement.dataset.theme = sharedTheme;
+                }
+            };
+
+            const initialTheme = readCookie()
+                || localStorage.getItem(storageKey)
+                || localStorage.getItem('theme')
+                || localStorage.getItem('blog-theme');
+            if (isTheme(initialTheme)) {
+                document.documentElement.dataset.theme = initialTheme;
+                saveTheme(initialTheme);
+            }
+
+            new MutationObserver(() => {
+                saveTheme(document.documentElement.dataset.theme);
+            }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+            window.addEventListener('focus', applySharedTheme);
+            window.addEventListener('storage', applySharedTheme);
+            document.addEventListener('visibilitychange', applySharedTheme);
+            window.setInterval(applySharedTheme, 1000);
+        })();
+    </script>
+    <style type="text/css">
+        {% for weight in "123456789"|make_list %}
+            @font-face {
+                font-family: 'Inter';
+                font-style: normal;
+                font-weight: {{ forloop.counter }}00;
+                font-display: swap;
+                src: url("{% static 'sb_admin/fonts/Inter-Ext.woff2' %}") format('woff2');
+                unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+            }
+            @font-face {
+                font-family: 'Inter';
+                font-style: normal;
+                font-weight: {{ forloop.counter }}00;
+                font-display: swap;
+                src: url("{% static 'sb_admin/fonts/Inter.woff2' %}") format('woff2');
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+        {% endfor %}
+    </style>
+{% endblock %}

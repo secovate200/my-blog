@@ -1,3 +1,4 @@
-Django==6.1.1
-django-simpleui==2026.1.13
+Django==6.0.9
+django-smartbase-admin==2.5.0
 djangorestframework==3.18.1
+psycopg[binary]==3.3.6
