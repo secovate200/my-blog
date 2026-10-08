@@ -11,6 +11,7 @@ from .views import (
     ProjectListAPIView,
     ProjectPostDetailAPIView,
     dashboard_csrf,
+    dashboard_change_password,
     dashboard_current_user,
     dashboard_login,
     dashboard_signup,
@@ -29,6 +30,7 @@ app_name = "blog"
 
 urlpatterns = [
     path("auth/csrf/", dashboard_csrf, name="dashboard-csrf"),
+    path("auth/password/", dashboard_change_password, name="dashboard-change-password"),
     path("auth/login/", dashboard_login, name="dashboard-login"),
     path("auth/signup/", dashboard_signup, name="dashboard-signup"),
     path("auth/logout/", dashboard_logout, name="dashboard-logout"),

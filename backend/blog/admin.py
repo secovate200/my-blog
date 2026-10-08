@@ -8,6 +8,7 @@ from django_smartbase_admin.engine.field import SBAdminField
 
 # 권한이 없는 프로젝트를 저장하려 할 때 사용할 예외를 가져옵니다.
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Case, CharField, Q, Value, When
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
@@ -16,7 +17,7 @@ from django.utils import timezone
 from django.utils.safestring import mark_safe
 
 from .forms import PostAdminForm, ProjectPostAdminForm
-from .notifications import send_contact_reply
+from .tasks import enqueue_contact_reply
 
 # 관리자 화면에 등록할 블로그 모델들을 가져옵니다.
 from .models import (
@@ -869,29 +870,28 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
 
     def save_model(self, request, obj, form, change):
         should_send = bool(obj.reply.strip()) and (
-            "reply" in form.changed_data or obj.email_sent_at is None
+            "reply" in form.changed_data
+            or (
+                obj.email_sent_at is None
+                and obj.status != ContactMessage.Status.IN_PROGRESS
+            )
         )
         super().save_model(request, obj, form, change)
 
         if not should_send:
             return
 
-        if send_contact_reply(obj):
-            sent_at = timezone.now()
-            ContactMessage.objects.filter(pk=obj.pk).update(
-                status=ContactMessage.Status.REPLIED,
-                replied_by=request.user,
-                replied_at=sent_at,
-                email_sent_at=sent_at,
-            )
-            obj.status = ContactMessage.Status.REPLIED
-            obj.replied_by = request.user
-            obj.replied_at = sent_at
-            obj.email_sent_at = sent_at
-            self.message_user(request, "답변 이메일을 전송했습니다.", messages.SUCCESS)
-        else:
-            self.message_user(
-                request,
-                "답변은 저장했지만 이메일 전송에 실패했습니다. SMTP 설정을 확인해 주세요.",
-                messages.WARNING,
-            )
+        ContactMessage.objects.filter(pk=obj.pk).update(
+            status=ContactMessage.Status.IN_PROGRESS,
+            replied_by=request.user,
+        )
+        obj.status = ContactMessage.Status.IN_PROGRESS
+        obj.replied_by = request.user
+        transaction.on_commit(
+            lambda: enqueue_contact_reply(obj.pk, request.user.pk)
+        )
+        self.message_user(
+            request,
+            "답변을 저장했으며 이메일 전송을 백그라운드에서 시작했습니다.",
+            messages.SUCCESS,
+        )

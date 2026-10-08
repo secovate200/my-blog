@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from .models import UserAccessStatus
-from .notifications import send_account_approval_email
+from .tasks import enqueue_account_approval_email
 
 
 @receiver(post_save, sender=get_user_model())
@@ -32,4 +33,6 @@ def notify_user_when_approved(sender, instance, created, **kwargs):
         and instance.status == UserAccessStatus.Status.APPROVED
         and getattr(instance, "_previous_status", None) != UserAccessStatus.Status.APPROVED
     ):
-        send_account_approval_email(instance.user)
+        transaction.on_commit(
+            lambda: enqueue_account_approval_email(instance.user_id)
+        )

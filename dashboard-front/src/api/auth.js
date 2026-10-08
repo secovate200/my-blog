@@ -51,3 +51,17 @@ export async function logout() {
     headers: { "X-CSRFToken": csrfToken },
   }));
 }
+
+export async function changePassword({ currentPassword, newPassword, newPasswordConfirm }) {
+  const csrfToken = await ensureCsrf();
+  return responseJson(await fetch("/blog/auth/password/", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirm: newPasswordConfirm,
+    }),
+  }));
+}

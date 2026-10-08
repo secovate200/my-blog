@@ -23,18 +23,18 @@ export const WriteContent = ({
       setMessage("편집기를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.");
       return;
     }
-    await editorRef.current.isReady;
-    const editorData = await editorRef.current.save();
-    const content = JSON.stringify(editorData);
-    const markdown = editorJsToPlainText(editorData);
-
-    formData.set("status", status);
-    formData.set("postType", postType);
-    formData.set("contentBlocks", content);
-    formData.set("contentMarkdown", markdown);
-
     setMessage("저장하는 중입니다...");
     try {
+      await editorRef.current.isReady;
+      const editorData = await editorRef.current.save();
+      const content = JSON.stringify(editorData);
+      const markdown = editorJsToPlainText(editorData);
+
+      formData.set("status", status);
+      formData.set("postType", postType);
+      formData.set("contentBlocks", content);
+      formData.set("contentMarkdown", markdown);
+
       const common = { title: formData.get("title"), status, visibility: formData.get("visibility"), content, contentMarkdown: markdown };
       if (postType === "research") {
         const postData = { ...common, project: formData.get("category"), summary: markdown.slice(0, 500) };
@@ -48,7 +48,8 @@ export const WriteContent = ({
         window.location.hash = initialPost ? `/blog-view?id=${encodeURIComponent(savedPost.id)}` : "/blog";
       }
     } catch (error) {
-      navigateToErrorPage(error);
+      if (error.status) navigateToErrorPage(error);
+      else setMessage("편집기 내용을 저장하지 못했습니다. 다시 시도해 주세요.");
     }
   };
 
@@ -76,6 +77,7 @@ export const WriteContent = ({
           <EditorJsEditor
             editorRef={editorRef}
             initialContent={initialPost?.content ?? ""}
+            onError={setMessage}
           />
           <p className="editorjs-help">
             <kbd>/</kbd>를 입력해 제목, 목록, 코드, 이미지, 파일 등의 블록을

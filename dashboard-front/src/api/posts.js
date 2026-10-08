@@ -17,8 +17,11 @@ async function csrfToken() {
   return decodeURIComponent(cookie("csrftoken") ?? "");
 }
 
-export async function fetchAdminPosts() {
-  return parseResponse(await fetch("/blog/dashboard/posts/", { credentials: "same-origin" }));
+export async function fetchAdminPosts(query = "") {
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("q", query.trim());
+  const search = params.size ? `?${params.toString()}` : "";
+  return parseResponse(await fetch(`/blog/dashboard/posts/${search}`, { credentials: "same-origin" }));
 }
 
 export async function fetchAdminPost(id) {

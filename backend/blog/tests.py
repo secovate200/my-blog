@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+import json
 import tempfile
 from unittest.mock import patch
 
@@ -9,8 +10,9 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .content import sanitize_content
-from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectMember, ProjectPost, Tag
+from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectMember, ProjectPost, Tag, UserAccessStatus
 from .notifications import send_contact_receipt, send_contact_reply
+from .tasks import _run_contact_reply
 
 
 class RichContentTests(TestCase):
@@ -36,6 +38,40 @@ class RichContentTests(TestCase):
             )
 
             self.assertIn(f'"level":{level}', sanitize_content(content))
+
+    def test_heading_tool_aliases_are_normalized(self):
+        for level in range(1, 7):
+            content = json.dumps({"blocks": [{"type": f"heading{level}", "data": {"text": "제목"}}]})
+
+            sanitized = sanitize_content(content)
+
+            self.assertIn('"type":"header"', sanitized)
+            self.assertIn(f'"level":{level}', sanitized)
+
+    def test_extended_editor_blocks_are_preserved(self):
+        content = json.dumps({
+            "blocks": [
+                {"type": "checklist", "data": {"items": [{"text": "<mark>확인</mark>", "checked": True}]}},
+                {"type": "list", "data": {"style": "checklist", "items": [{"content": "완료", "meta": {"checked": True}, "items": []}]}},
+                {"type": "table", "data": {"withHeadings": True, "content": [["제목", "값"], ["A", "B"]]}},
+                {"type": "warning", "data": {"title": "주의", "message": "확인하세요"}},
+                {"type": "embed", "data": {"service": "youtube", "source": "https://youtu.be/example", "embed": "https://www.youtube.com/embed/example", "width": 580, "height": 320, "caption": "영상"}},
+                {"type": "video", "data": {"url": "https://youtu.be/example", "caption": "영상 설명"}},
+                {"type": "linkCard", "data": {"url": "https://example.com", "title": "문서", "description": "설명"}},
+            ]
+        }, ensure_ascii=False)
+
+        sanitized = sanitize_content(content)
+
+        for block_type in ("checklist", "table", "warning", "embed", "video", "linkCard"):
+            self.assertIn(f'"type":"{block_type}"', sanitized)
+        self.assertIn('"style":"checklist"', sanitized)
+        self.assertIn('"checked":true', sanitized)
+
+    def test_unsafe_embed_is_removed(self):
+        content = '{"blocks":[{"type":"embed","data":{"embed":"https://evil.example/embed"}}]}'
+
+        self.assertNotIn('"type":"embed"', sanitize_content(content))
 
     def test_quote_trailing_empty_lines_are_removed(self):
         content = (
@@ -90,9 +126,30 @@ class BlogAssetTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json()["success"], 1)
                 asset = BlogAsset.objects.get()
+                self.assertEqual(
+                    response.json()["file"]["url"],
+                    reverse("blog:asset-download", args=[asset.pk]),
+                )
                 download = self.client.get(reverse("blog:asset-download", args=[asset.pk]))
                 self.assertEqual(download.status_code, 200)
                 self.assertIn("attachment", download["Content-Disposition"])
+
+    def test_missing_attachment_file_returns_404(self):
+        user = get_user_model().objects.create_superuser(
+            username="missing-asset-admin", email="missing@example.com", password="password"
+        )
+        asset = BlogAsset.objects.create(
+            file="blog-assets/missing.pdf",
+            original_name="missing.pdf",
+            content_type="application/pdf",
+            size=10,
+            kind=BlogAsset.Kind.FILE,
+            uploaded_by=user,
+        )
+
+        response = self.client.get(reverse("blog:asset-download", args=[asset.pk]))
+
+        self.assertEqual(response.status_code, 404)
 
 
 class DashboardAuthenticationTests(TestCase):
@@ -112,6 +169,35 @@ class DashboardAuthenticationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("csrftoken", response.cookies)
+
+    @patch("blog.views.enqueue_signup_notification")
+    def test_signup_queues_discord_notification_after_commit(self, enqueue):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("blog:dashboard-signup"),
+                data={
+                    "name": "신규 사용자",
+                    "email": "new-user@example.com",
+                    "password": "A-secure-password-123!",
+                },
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 201)
+        user = get_user_model().objects.get(email="new-user@example.com")
+        enqueue.assert_called_once_with(user.pk)
+
+    @patch("blog.signals.enqueue_account_approval_email")
+    def test_approval_queues_email_after_commit(self, enqueue):
+        access_status = self.regular_user.access_status
+        access_status.status = UserAccessStatus.Status.PENDING
+        access_status.save()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            access_status.status = UserAccessStatus.Status.APPROVED
+            access_status.save()
+
+        enqueue.assert_called_once_with(self.regular_user.pk)
 
     def test_staff_user_can_login_with_username_and_read_session(self):
         response = self.client.post(
@@ -134,6 +220,72 @@ class DashboardAuthenticationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_authenticated_user_can_change_password_and_keep_session(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "secure-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "New-secure-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.regular_user.refresh_from_db()
+        self.assertTrue(self.regular_user.check_password("New-secure-password-123!"))
+        self.assertEqual(
+            self.client.get(reverse("blog:dashboard-current-user")).status_code,
+            200,
+        )
+
+    def test_password_change_rejects_incorrect_current_password(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "incorrect-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "New-secure-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.regular_user.refresh_from_db()
+        self.assertTrue(self.regular_user.check_password("secure-password"))
+
+    def test_password_change_rejects_mismatched_confirmation(self):
+        self.client.force_login(self.regular_user)
+
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "secure-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "Different-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_password_change_requires_authentication(self):
+        response = self.client.post(
+            reverse("blog:dashboard-change-password"),
+            data={
+                "current_password": "secure-password",
+                "new_password": "New-secure-password-123!",
+                "new_password_confirm": "New-secure-password-123!",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 401)
 
     def test_regular_user_can_login_to_dashboard_without_admin_access(self):
         response = self.client.post(
@@ -180,6 +332,38 @@ class DashboardAuthenticationTests(TestCase):
         self.assertEqual(response.json()["recentPosts"][0]["title"], "DB 게시글")
         projects = self.client.get(reverse("blog:dashboard-projects"))
         self.assertEqual([item["name"] for item in projects.json()["items"]], ["연구"])
+
+    def test_dashboard_posts_can_be_searched(self):
+        category = Category.objects.create(name="검색 카테고리")
+        matching = Post.objects.create(
+            title="고유한 대시보드 검색 제목",
+            author=self.admin,
+            category=category,
+            content="검색할 수 있는 본문",
+            status=Post.Status.DRAFT,
+        )
+        matching.tags.add(Tag.objects.create(name="관리검색태그"))
+        other_category = Category.objects.create(name="기타")
+        Post.objects.create(
+            title="관련 없는 글",
+            author=self.admin,
+            category=other_category,
+            content="다른 내용",
+            status=Post.Status.PUBLISHED,
+        )
+        self.client.force_login(self.admin)
+
+        for query in ["대시보드 검색", "검색할 수 있는", "검색 카테고리", "관리검색태그"]:
+            with self.subTest(query=query):
+                response = self.client.get(
+                    reverse("blog:dashboard-posts"),
+                    {"q": query},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    [post["id"] for post in response.json()["items"]],
+                    [matching.pk],
+                )
 
     def test_dashboard_summary_is_empty_for_regular_user_without_project(self):
         self.client.force_login(self.regular_user)
@@ -525,28 +709,49 @@ class ProjectApiTests(TestCase):
 
 
 class ContactMessageTests(TestCase):
-    @patch("blog.views.send_contact_notification", return_value=True)
-    @patch("blog.views.send_contact_receipt", return_value=True)
-    def test_contact_message_is_saved_and_notified(self, receipt, notify):
-        response = self.client.post(
-            reverse("blog:contact-create"),
-            {
-                "name": "방문자",
-                "email": "visitor@example.com",
-                "message": "블로그 문의입니다.",
-            },
+    @patch("blog.tasks.send_contact_reply", return_value=True)
+    def test_background_reply_marks_contact_as_replied_after_email_succeeds(self, send_reply):
+        admin = get_user_model().objects.create_superuser(
+            username="reply-admin",
+            email="reply-admin@example.com",
+            password="password",
+        )
+        contact = ContactMessage.objects.create(
+            name="방문자",
+            email="visitor@example.com",
+            message="문의 내용",
+            reply="답변 내용",
+            status=ContactMessage.Status.IN_PROGRESS,
         )
 
-        self.assertEqual(response.status_code, 201)
-        self.assertTrue(response.json()["notification_sent"])
-        self.assertTrue(response.json()["receipt_sent"])
-        self.assertEqual(ContactMessage.objects.count(), 1)
-        notify.assert_called_once_with(ContactMessage.objects.get())
-        receipt.assert_called_once_with(ContactMessage.objects.get())
+        _run_contact_reply(contact.pk, admin.pk)
 
-    @patch("blog.views.send_contact_notification", return_value=True)
-    @patch("blog.views.send_contact_receipt", return_value=True)
-    def test_logged_in_admin_can_submit_without_csrf_token(self, receipt, notify):
+        contact.refresh_from_db()
+        send_reply.assert_called_once()
+        self.assertEqual(contact.status, ContactMessage.Status.REPLIED)
+        self.assertEqual(contact.replied_by, admin)
+        self.assertIsNotNone(contact.replied_at)
+        self.assertIsNotNone(contact.email_sent_at)
+
+    @patch("blog.views.enqueue_contact_notifications")
+    def test_contact_message_is_saved_and_notifications_are_queued(self, enqueue):
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                reverse("blog:contact-create"),
+                {
+                    "name": "방문자",
+                    "email": "visitor@example.com",
+                    "message": "블로그 문의입니다.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()["notifications_queued"])
+        self.assertEqual(ContactMessage.objects.count(), 1)
+        enqueue.assert_called_once_with(ContactMessage.objects.get().pk)
+
+    @patch("blog.views.enqueue_contact_notifications")
+    def test_logged_in_admin_can_submit_without_csrf_token(self, enqueue):
         user = get_user_model().objects.create_superuser(
             username="admin",
             email="admin@example.com",
@@ -555,22 +760,21 @@ class ContactMessageTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         client.force_login(user)
 
-        response = client.post(
-            reverse("blog:contact-create"),
-            {
-                "name": "관리자",
-                "email": "admin@example.com",
-                "message": "로그인 상태에서 보낸 문의입니다.",
-            },
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = client.post(
+                reverse("blog:contact-create"),
+                {
+                    "name": "관리자",
+                    "email": "admin@example.com",
+                    "message": "로그인 상태에서 보낸 문의입니다.",
+                },
+            )
 
         self.assertEqual(response.status_code, 201)
-        notify.assert_called_once_with(ContactMessage.objects.get())
-        receipt.assert_called_once_with(ContactMessage.objects.get())
+        enqueue.assert_called_once_with(ContactMessage.objects.get().pk)
 
-    @patch("blog.views.send_contact_notification")
-    @patch("blog.views.send_contact_receipt")
-    def test_invalid_contact_message_is_rejected(self, receipt, notify):
+    @patch("blog.views.enqueue_contact_notifications")
+    def test_invalid_contact_message_is_rejected(self, enqueue):
         response = self.client.post(
             reverse("blog:contact-create"),
             {"name": "", "email": "invalid", "message": ""},
@@ -578,8 +782,7 @@ class ContactMessageTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(ContactMessage.objects.count(), 0)
-        notify.assert_not_called()
-        receipt.assert_not_called()
+        enqueue.assert_not_called()
 
     @override_settings(
         EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",

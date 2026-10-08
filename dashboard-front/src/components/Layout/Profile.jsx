@@ -14,19 +14,26 @@ export const Profile = ({
   onWritePost = () => {},
   onMyPage = () => {},
   onLogout = () => {},
+  onSearch = () => {},
+  searchQuery = "",
   canAccessAdmin = false,
   canWritePost = false,
   theme = "light",
   onToggleTheme = () => {},
 }) => {
+  const submitSearch = (event) => {
+    event.preventDefault();
+    onSearch(new FormData(event.currentTarget).get("query").trim());
+  };
+
   return (
     <aside className="profile" aria-label="Profile and quick actions">
       <div className="profile--tools">
-        <label className="profile-search">
+        <form className="profile-search" role="search" onSubmit={submitSearch}>
           <span className="visually-hidden">게시글 검색</span>
-          <input type="search" placeholder="검색..." />
-          <FaSearch aria-hidden="true" />
-        </label>
+          <input key={searchQuery} name="query" type="search" defaultValue={searchQuery} placeholder="게시글 검색..." />
+          <button type="submit" aria-label="게시글 검색"><FaSearch aria-hidden="true" /></button>
+        </form>
         <button
           className="profile-theme-toggle"
           type="button"

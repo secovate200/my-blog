@@ -2,9 +2,16 @@ from pathlib import Path
 import hashlib
 import json
 
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import (
+    authenticate,
+    get_user_model,
+    login,
+    logout,
+    update_session_auth_hash,
+)
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -22,7 +29,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from .models import BlogAsset, Category, Post, Project, ProjectPost, Tag, UserAccessStatus
-from .notifications import send_contact_notification, send_contact_receipt, send_signup_notification
+from .tasks import enqueue_contact_notifications, enqueue_signup_notification
 from .serializer import (
     ContactMessageSerializer,
     PostSerializer,
@@ -83,6 +90,38 @@ def dashboard_current_user(request):
     if not request.user.is_authenticated:
         return JsonResponse({"detail": "로그인이 필요합니다."}, status=401)
     return JsonResponse(_user_payload(request.user))
+
+
+@require_POST
+@csrf_protect
+def dashboard_change_password(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "로그인이 필요합니다."}, status=401)
+
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "요청 형식이 올바르지 않습니다."}, status=400)
+
+    current_password = str(data.get("current_password", ""))
+    new_password = str(data.get("new_password", ""))
+    new_password_confirm = str(data.get("new_password_confirm", ""))
+    if not current_password or not new_password or not new_password_confirm:
+        return JsonResponse({"detail": "모든 비밀번호 항목을 입력해 주세요."}, status=400)
+    if not request.user.check_password(current_password):
+        return JsonResponse({"detail": "현재 비밀번호가 올바르지 않습니다."}, status=400)
+    if new_password != new_password_confirm:
+        return JsonResponse({"detail": "새 비밀번호가 일치하지 않습니다."}, status=400)
+
+    try:
+        validate_password(new_password, user=request.user)
+    except ValidationError as error:
+        return JsonResponse({"detail": " ".join(error.messages)}, status=400)
+
+    request.user.set_password(new_password)
+    request.user.save(update_fields=("password",))
+    update_session_auth_hash(request, request.user)
+    return JsonResponse({"detail": "비밀번호가 변경되었습니다."})
 
 
 @require_GET
@@ -163,6 +202,14 @@ def dashboard_posts(request):
     posts = Post.objects.select_related("category").prefetch_related("tags").order_by("-updated_at")
     if not request.user.has_perm("blog.view_post"):
         posts = posts.filter(status=Post.Status.PUBLISHED)
+    search = request.GET.get("q", "").strip()
+    if search:
+        posts = posts.filter(
+            Q(title__icontains=search)
+            | Q(content__icontains=search)
+            | Q(category__name__icontains=search)
+            | Q(tags__name__icontains=search)
+        ).distinct()
     return JsonResponse({"items": [_dashboard_post_payload(post) for post in posts]})
 
 
@@ -380,7 +427,7 @@ def dashboard_signup(request):
             "reviewed_at": None,
         },
     )
-    send_signup_notification(user)
+    transaction.on_commit(lambda: enqueue_signup_notification(user.pk))
     return JsonResponse(
         {"detail": "회원가입이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다."},
         status=201,
@@ -433,7 +480,10 @@ class BlogAssetUploadAPIView(APIView):
             uploaded_by=request.user,
         )
         route = "blog:asset-content" if is_image else "blog:asset-download"
-        url = request.build_absolute_uri(reverse(route, args=[asset.pk]))
+        # Keep asset URLs on the browser's current origin.  In development the
+        # request reaches Django through Vite's proxy, so an absolute URL would
+        # otherwise expose an internal host such as ``backend:8000``.
+        url = reverse(route, args=[asset.pk])
         return Response({
             "success": 1,
             "file": {
@@ -454,6 +504,8 @@ class BlogAssetContentAPIView(APIView):
             asset = BlogAsset.objects.get(pk=pk)
         except BlogAsset.DoesNotExist as error:
             raise Http404 from error
+        if not asset.file or not asset.file.storage.exists(asset.file.name):
+            raise Http404("첨부파일을 찾을 수 없습니다.")
         response = FileResponse(
             asset.file.open("rb"),
             as_attachment=download or asset.kind == BlogAsset.Kind.FILE,
@@ -594,11 +646,9 @@ class ContactMessageCreateAPIView(CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         contact = serializer.save()
-        notification_sent = send_contact_notification(contact)
-        receipt_sent = send_contact_receipt(contact)
+        transaction.on_commit(lambda: enqueue_contact_notifications(contact.pk))
         response_data = {
             **serializer.data,
-            "notification_sent": notification_sent,
-            "receipt_sent": receipt_sent,
+            "notifications_queued": True,
         }
         return Response(response_data, status=status.HTTP_201_CREATED)

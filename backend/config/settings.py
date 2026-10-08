@@ -67,8 +67,6 @@ INSTALLED_APPS = [
     'django_smartbase_admin',
     'easy_thumbnails',
     'widget_tweaks',
-    'ckeditor',
-    'ckeditor_uploader',
     'nested_admin',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -169,7 +167,6 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-CKEDITOR_UPLOAD_PATH = 'ckeditor/'
 
 # Django SmartBase Admin
 SB_ADMIN_CONFIGURATION = 'config.sbadmin_config.SBAdminConfiguration'

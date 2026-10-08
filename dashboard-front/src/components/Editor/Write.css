@@ -80,6 +80,9 @@
   scrollbar-gutter: stable;
 }
 
+.editorjs-url-tool { display: grid; gap: 8px; padding: 12px; border: 1px solid color-mix(in srgb, var(--sub-text) 30%, transparent); border-radius: 8px; background: var(--third-background); }
+.editorjs-url-tool input { width: 100%; border: 1px solid color-mix(in srgb, var(--sub-text) 35%, transparent); border-radius: 6px; padding: 10px 12px; background: var(--background); color: var(--text-color); }
+
 .editorjs-dashboard .codex-editor__redactor {
   padding-bottom: 120px !important;
 }

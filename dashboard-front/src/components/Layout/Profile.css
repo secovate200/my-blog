@@ -42,6 +42,22 @@
   color: var(--sub-text);
 }
 
+.profile-search button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--header-color);
+  cursor: pointer;
+}
+
+.profile-search:focus-within {
+  outline: 2px solid var(--header-color);
+  outline-offset: 2px;
+}
+
 .profile-theme-toggle {
   width: 42px;
   height: 42px;

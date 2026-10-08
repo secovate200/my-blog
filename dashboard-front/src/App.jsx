@@ -37,11 +37,8 @@ const PageLoading = () => (
 );
 export const App = () => {
   const [theme, setTheme] = useState(getInitialTheme);
-  const getPage = () => {
-    const requestedPage = window.location.hash.replace("#/", "").split("?")[0] || "dashboard";
-    return requestedPage;
-  };
-  const [page, setPage] = useState(getPage);
+  const [routeHash, setRouteHash] = useState(() => window.location.hash);
+  const page = routeHash.replace("#/", "").split("?")[0] || "dashboard";
   const [user, setUser] = useState(undefined);
   const [categories, setCategories] = useState([]);
   const [researchCategories, setResearchCategories] = useState([]);
@@ -106,15 +103,17 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    const handleHashChange = () => setPage(getPage());
+    const handleHashChange = () => setRouteHash(window.location.hash);
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   const toggleTheme = () => setTheme((current) => current === "light" ? "dark" : "light");
-  const researchCategoryId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("category") || "";
-  const researchPostId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("id") || "";
-  const blogPostId = new URLSearchParams(window.location.hash.split("?")[1] || "").get("id") || "";
+  const routeParams = new URLSearchParams(routeHash.split("?")[1] || "");
+  const researchCategoryId = routeParams.get("category") || "";
+  const researchPostId = routeParams.get("id") || "";
+  const blogPostId = routeParams.get("id") || "";
+  const dashboardSearchQuery = routeParams.get("q") || "";
   const statusCode = ["401", "403", "429", "500"].includes(page)
     ? Number(page)
     : null;
@@ -175,7 +174,7 @@ export const App = () => {
       <div className="dashboard--content">
         <Suspense fallback={<PageLoading />}>
           {page === "blog" ? (
-            <BlogContent theme={theme} onToggleTheme={toggleTheme} />
+            <BlogContent theme={theme} onToggleTheme={toggleTheme} searchQuery={dashboardSearchQuery} />
           ) : page === "blog-view" || page === "blog-edit" ? (
             <BlogPostContent postId={blogPostId} mode={page === "blog-edit" ? "edit" : "view"} theme={theme} categories={categories} permissions={user.permissions} />
           ) : page === "write" ? (
@@ -197,7 +196,7 @@ export const App = () => {
           ) : page === "research-view" || page === "research-edit" ? (
             <ResearchDetailContent postId={researchPostId} mode={page === "research-edit" ? "edit" : "view"} theme={theme} categories={researchCategories} />
           ) : page === "settings" ? (
-            <SettingsContent theme={theme} onToggleTheme={toggleTheme} />
+            <SettingsContent theme={theme} onToggleTheme={toggleTheme} user={user} />
           ) : page === "categories" ? (
             <CategoriesContent showDrafts={Boolean(user.permissions?.viewDraftPosts)} />
           ) : (
@@ -219,6 +218,8 @@ export const App = () => {
           onWritePost={() => { window.location.hash = "/write"; }}
           onMyPage={() => { window.location.hash = "/settings"; }}
           onLogout={handleLogout}
+          onSearch={(query) => { window.location.hash = query ? `/blog?q=${encodeURIComponent(query)}` : "/blog"; }}
+          searchQuery={page === "blog" ? dashboardSearchQuery : ""}
           canAccessAdmin={Boolean(user?.is_staff)}
           canWritePost={Boolean(user.permissions?.addPosts)}
         />
