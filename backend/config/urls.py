@@ -16,9 +16,11 @@ Including another URLconf
 """
 from django.urls import include, path
 from django_smartbase_admin.admin.site import sb_admin_site
-from .views import admin_login_redirect, admin_logout_redirect
+from .views import admin_login_redirect, admin_logout_redirect, health, home_redirect
 
 urlpatterns = [
+    path('', home_redirect, name='home'),
+    path('health/', health, name='health'),
     path('admin/login/', admin_login_redirect, name='dashboard-admin-login'),
     path('admin/logout/', admin_logout_redirect, name='dashboard-admin-logout'),
     path('admin/', sb_admin_site.urls),

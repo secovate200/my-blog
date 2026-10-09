@@ -1,4 +1,4 @@
-const errorStatusPages = new Set([401, 403, 404, 429, 500]);
+const errorStatusPages = new Set([400, 401, 403, 404, 429, 500]);
 
 export function getErrorStatus(error, fallback = 500) {
   const status = Number(error?.status);

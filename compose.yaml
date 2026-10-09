@@ -1,4 +1,19 @@
 services:
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:v1.0.4
+    restart: unless-stopped
+    ports:
+      # 로그 관리 UI는 기본적으로 이 PC에서만 접근할 수 있다.
+      - "${OPENOBSERVE_BIND_ADDRESS:-127.0.0.1}:5080:5080"
+    environment:
+      ZO_DATA_DIR: /data
+      ZO_ROOT_USER_EMAIL: ${OPENOBSERVE_USER:-admin@example.com}
+      ZO_ROOT_USER_PASSWORD: ${OPENOBSERVE_PASSWORD:-change-this-password}
+      ZO_TELEMETRY: "false"
+      ZO_COMPACT_DATA_RETENTION_DAYS: ${OPENOBSERVE_RETENTION_DAYS:-14}
+    volumes:
+      - openobserve-data:/data
+
   blog-front:
     build: ./blog-front
     ports:
@@ -7,10 +22,10 @@ services:
       - ./blog-front:/app
       - blog-front-node-modules:/app/node_modules
     environment:
-      VITE_API_PROXY_TARGET: http://backend:8000
+      VITE_API_PROXY_TARGET: http://waf:8080
       VITE_DASHBOARD_URL: ${VITE_DASHBOARD_URL:-http://localhost:5175}
     depends_on:
-      - backend
+      - waf
 
   dashboard-front:
     build: ./dashboard-front
@@ -20,23 +35,65 @@ services:
       - ./dashboard-front:/app
       - dashboard-front-node-modules:/app/node_modules
     environment:
-      VITE_API_PROXY_TARGET: http://backend:8000
+      VITE_API_PROXY_TARGET: http://waf:8080
     depends_on:
-      - backend
+      - waf
+
+  waf:
+    image: owasp/modsecurity-crs:4.25-nginx-lts
+    restart: unless-stopped
+    ports:
+      - "8000:8080"
+    environment:
+      BACKEND: http://backend:8000
+      PORT: "8080"
+      MODSEC_RULE_ENGINE: ${WAF_MODE:-DetectionOnly}
+      MODSEC_AUDIT_ENGINE: RelevantOnly
+      MODSEC_AUDIT_LOG: /var/log/modsecurity/audit/audit.json
+      MODSEC_AUDIT_LOG_FORMAT: JSON
+      MODSEC_AUDIT_LOG_TYPE: Serial
+      # A/H/Z만 저장해 요청 본문, 쿠키, Authorization 헤더가 감사 로그에 남지 않게 한다.
+      MODSEC_AUDIT_LOG_PARTS: AHZ
+      BLOCKING_PARANOIA: ${WAF_BLOCKING_PARANOIA:-1}
+      DETECTION_PARANOIA: ${WAF_DETECTION_PARANOIA:-2}
+      ANOMALY_INBOUND: ${WAF_INBOUND_THRESHOLD:-5}
+      ANOMALY_OUTBOUND: ${WAF_OUTBOUND_THRESHOLD:-4}
+    volumes:
+      - waf-audit:/var/log/modsecurity
+      - ./observability/waf/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf:/etc/modsecurity.d/owasp-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
 
   backend:
     build: ./backend
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     volumes:
       - ./backend:/app
+      - waf-audit:/var/log/waf:ro
     environment:
       DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
       DISCORD_SIGNUP_WEBHOOK_URL: ${DISCORD_SIGNUP_WEBHOOK_URL:-}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      DISCORD_ALERT_WEBHOOK_URL: ${DISCORD_ALERT_WEBHOOK_URL:-}
+      WAF_DISCORD_COOLDOWN_SECONDS: ${WAF_DISCORD_COOLDOWN_SECONDS:-60}
+      OPENOBSERVE_URL: http://openobserve:5080
+      OPENOBSERVE_ORG: ${OPENOBSERVE_ORG:-default}
+      OPENOBSERVE_STREAM: ${OPENOBSERVE_STREAM:-blog_logs}
+      OPENOBSERVE_USER: ${OPENOBSERVE_USER:-admin@example.com}
+      OPENOBSERVE_PASSWORD: ${OPENOBSERVE_PASSWORD:-change-this-password}
+      OBSERVABILITY_ENVIRONMENT: ${OBSERVABILITY_ENVIRONMENT:-development}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,waf}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:5175,http://127.0.0.1:5175}
       DASHBOARD_LOGIN_URL: ${DASHBOARD_LOGIN_URL:-http://localhost:5175/#/login}
       DASHBOARD_FORBIDDEN_URL: ${DASHBOARD_FORBIDDEN_URL:-http://localhost:5175/#/403}
+      BLOG_FRONTEND_URL: ${BLOG_FRONTEND_URL:-http://localhost:5173}
       EMAIL_HOST: ${EMAIL_HOST:-}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
@@ -44,8 +101,12 @@ services:
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
       EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
+    depends_on:
+      - openobserve
 
 volumes:
   blog-front-node-modules:
   dashboard-front-node-modules:
+  openobserve-data:
+  waf-audit:
 

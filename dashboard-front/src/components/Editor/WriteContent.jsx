@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import "./Write.css";
 import { createPost, createResearchPost, updatePost, updateResearchPost } from "../../api";
-import { editorJsToPlainText } from "../../utils/editorContent";
+import { editorJsToPlainText, normalizeEditorDocument } from "../../utils/editorContent";
 import { navigateToErrorPage } from "../../utils/errorNavigation";
 import EditorJsEditor from "./EditorJsEditor";
 
@@ -26,7 +26,7 @@ export const WriteContent = ({
     setMessage("저장하는 중입니다...");
     try {
       await editorRef.current.isReady;
-      const editorData = await editorRef.current.save();
+      const editorData = normalizeEditorDocument(await editorRef.current.save());
       const content = JSON.stringify(editorData);
       const markdown = editorJsToPlainText(editorData);
 

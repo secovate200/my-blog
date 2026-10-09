@@ -137,6 +137,14 @@ function parseDocument(content) {
     return {
       ...parsed,
       blocks: parsed.blocks.map((block) => {
+        const headingMatch = /^heading([1-6])$/.exec(block?.type ?? "");
+        if (headingMatch) {
+          block = {
+            ...block,
+            type: "header",
+            data: { ...block.data, level: Number(headingMatch[1]) },
+          };
+        }
         const value = block?.data?.file?.url;
         if (!value) return block;
         try {

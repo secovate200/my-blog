@@ -80,6 +80,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'config.middleware.ObservabilityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -184,11 +185,40 @@ DASHBOARD_FORBIDDEN_URL = os.environ.get(
     'DASHBOARD_FORBIDDEN_URL',
     'http://localhost:5175/#/403',
 )
+BLOG_FRONTEND_URL = os.environ.get('BLOG_FRONTEND_URL', 'http://localhost:5173')
 
 # 문의 알림과 회원가입 알림은 서로 다른 Discord 채널로 보낼 수 있습니다.
 # 기존 DISCORD_WEBHOOK_URL은 문의 알림용으로 유지합니다.
 DISCORD_WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL', '')
 DISCORD_SIGNUP_WEBHOOK_URL = os.environ.get('DISCORD_SIGNUP_WEBHOOK_URL', '')
+DISCORD_ALERT_WEBHOOK_URL = os.environ.get('DISCORD_ALERT_WEBHOOK_URL', '')
+WAF_DISCORD_COOLDOWN_SECONDS = int(os.environ.get('WAF_DISCORD_COOLDOWN_SECONDS', '60'))
+
+OPENOBSERVE_URL = os.environ.get('OPENOBSERVE_URL', '')
+OPENOBSERVE_ORG = os.environ.get('OPENOBSERVE_ORG', 'default')
+OPENOBSERVE_STREAM = os.environ.get('OPENOBSERVE_STREAM', 'blog_logs')
+OPENOBSERVE_USER = os.environ.get('OPENOBSERVE_USER', '')
+OPENOBSERVE_PASSWORD = os.environ.get('OPENOBSERVE_PASSWORD', '')
+OBSERVABILITY_ENVIRONMENT = os.environ.get('OBSERVABILITY_ENVIRONMENT', 'development')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {'()': 'config.observability.StructuredJsonFormatter'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'json'},
+        'openobserve': {'class': 'config.observability.OpenObserveHandler', 'level': 'INFO'},
+    },
+    'root': {
+        'handlers': ['console', 'openobserve'],
+        'level': os.environ.get('LOG_LEVEL', 'INFO'),
+    },
+    'loggers': {
+        'django.server': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    },
+}
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')

@@ -28,6 +28,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
+from .content import sanitize_content
 from .models import BlogAsset, Category, Post, Project, ProjectPost, Tag, UserAccessStatus
 from .tasks import enqueue_contact_notifications, enqueue_signup_notification
 from .serializer import (
@@ -181,7 +182,7 @@ def _save_dashboard_post(request, post=None):
     post = post or Post(author=request.user)
     post.title = str(data.get("title", "")).strip()
     post.category = category
-    post.content = data.get("content", "")
+    post.content = sanitize_content(data.get("content", ""))
     post.status = Post.Status.PUBLISHED if data.get("status") == "published" else Post.Status.DRAFT
     post.save()
     tag_names = [name.strip() for name in str(data.get("tags", "")).split(",") if name.strip()]

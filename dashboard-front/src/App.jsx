@@ -9,7 +9,7 @@ import { ResearchContent } from "./Container/Research";
 import { LoginContent, SignupContent } from "./Container/Login";
 import "./App.css";
 import "./styles/Responsive.css";
-import { StatusPage } from "./components/Feedback/StatusPage";
+import { ClientError, ServerError } from "./Container/Error";
 import { getInitialTheme, getSharedTheme, saveTheme } from "./utils/theme";
 import { navigateToErrorPage } from "./utils/errorNavigation";
 import { fetchAdminCategories, fetchAdminProjects, getCurrentUser, login, logout, signup } from "./api";
@@ -114,8 +114,9 @@ export const App = () => {
   const researchPostId = routeParams.get("id") || "";
   const blogPostId = routeParams.get("id") || "";
   const dashboardSearchQuery = routeParams.get("q") || "";
-  const statusCode = ["401", "403", "429", "500"].includes(page)
-    ? Number(page)
+  const numericPage = Number(page);
+  const statusCode = /^\d{3}$/.test(page) && numericPage >= 400 && numericPage <= 599
+    ? numericPage
     : null;
 
   const handleLogin = async (credentials) => {
@@ -138,7 +139,9 @@ export const App = () => {
 
   if (user === undefined) return <PageLoading />;
 
-  if (statusCode) return <StatusPage code={statusCode} />;
+  if (statusCode) return statusCode >= 500
+    ? <ServerError status={statusCode} />
+    : <ClientError status={statusCode} />;
 
   if (!user && page !== "login" && page !== "signup") {
     window.location.hash = "/login";
@@ -158,7 +161,7 @@ export const App = () => {
   const knownPages = ["dashboard", "blog", "blog-view", "blog-edit", "write", "research", "research-write", "research-view", "research-edit", "settings", "categories"];
 
   if (!knownPages.includes(page)) {
-    return <StatusPage code={404} />;
+    return <ClientError status={404} />;
   }
 
   const requiredPermission = {
@@ -166,7 +169,7 @@ export const App = () => {
     research: "viewProjects", "research-view": "viewResearchPosts", "research-write": "addResearchPosts", "research-edit": "changeResearchPosts",
     categories: "viewCategories",
   }[page];
-  if (requiredPermission && !user.permissions?.[requiredPermission]) return <StatusPage code={403} />;
+  if (requiredPermission && !user.permissions?.[requiredPermission]) return <ClientError status={403} />;
 
   return (
     <div className="dashboard">

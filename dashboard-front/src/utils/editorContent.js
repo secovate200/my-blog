@@ -34,3 +34,18 @@ export function editorJsToPlainText(editorDocument = {}) {
   });
   return lines.filter(Boolean).join("\n\n");
 }
+
+export function normalizeEditorDocument(editorDocument = {}) {
+  return {
+    ...editorDocument,
+    blocks: (editorDocument.blocks ?? []).map((block) => {
+      const headingMatch = /^heading([1-6])$/.exec(block?.type ?? "");
+      if (!headingMatch) return block;
+      return {
+        ...block,
+        type: "header",
+        data: { ...block.data, level: Number(headingMatch[1]) },
+      };
+    }),
+  };
+}

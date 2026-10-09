@@ -13,6 +13,83 @@ from .content import sanitize_content
 from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectMember, ProjectPost, Tag, UserAccessStatus
 from .notifications import send_contact_receipt, send_contact_reply
 from .tasks import _run_contact_reply
+from config.waf_events import normalize_waf_audit
+
+
+class ObservabilityTests(TestCase):
+    def test_root_redirects_to_blog_frontend(self):
+        response = self.client.get("/")
+
+        self.assertRedirects(
+            response,
+            "http://localhost:5173",
+            fetch_redirect_response=False,
+        )
+
+    def test_health_endpoint_checks_database(self):
+        response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok", "database": "up"})
+
+    def test_request_id_is_returned(self):
+        response = self.client.get("/health/", HTTP_X_REQUEST_ID="test-request-id")
+
+        self.assertEqual(response.headers["X-Request-ID"], "test-request-id")
+
+    def test_waf_audit_keeps_ip_but_redacts_sensitive_matched_data(self):
+        audit = {
+            "transaction": {
+                "unique_id": "tx-123",
+                "client_ip": "203.0.113.42",
+                "request": {"method": "POST", "uri": "/api/posts/?debug=true"},
+                "response": {"http_code": 403},
+                "messages": [{
+                    "message": "SQL injection detected",
+                    "details": {
+                        "ruleId": "942100",
+                        "severity": "CRITICAL",
+                        "tags": ["attack-sqli", "OWASP_CRS"],
+                        "data": "Matched Data: super-secret found within ARGS:password",
+                    },
+                }],
+            },
+        }
+
+        event = normalize_waf_audit(audit)[0]
+
+        self.assertEqual(event["attack_type"], "sqli")
+        self.assertEqual(event["path"], "/api/posts/")
+        self.assertEqual(event["rule_id"], "942100")
+        self.assertEqual(event["matched_field"], "ARGS:password")
+        self.assertEqual(event["client_ip"], "203.0.113.42")
+        self.assertEqual(event["matched_data"], "[redacted]")
+        self.assertNotIn("body", event)
+        self.assertNotEqual(event["client_fingerprint"], "203.0.113.42")
+
+    def test_waf_audit_keeps_short_non_sensitive_attack_fragment(self):
+        audit = {
+            "transaction": {
+                "unique_id": "tx-456",
+                "client_ip": "198.51.100.10",
+                "request": {"method": "GET", "uri": "/?q=attack"},
+                "response": {"http_code": 403},
+                "messages": [{
+                    "details": {
+                        "ruleId": "941100",
+                        "severity": "CRITICAL",
+                        "tags": ["attack-xss"],
+                        "data": "Matched Data: <script>alert(1)</script> found within ARGS:q",
+                    },
+                }],
+            },
+        }
+
+        event = normalize_waf_audit(audit)[0]
+
+        self.assertEqual(event["client_ip"], "198.51.100.10")
+        self.assertEqual(event["matched_field"], "ARGS:q")
+        self.assertEqual(event["matched_data"], "<script>alert(1)</script>")
 
 
 class RichContentTests(TestCase):
@@ -364,6 +441,41 @@ class DashboardAuthenticationTests(TestCase):
                     [post["id"] for post in response.json()["items"]],
                     [matching.pk],
                 )
+
+    def test_dashboard_post_keeps_code_but_sanitizes_executable_html(self):
+        category = Category.objects.create(name="JavaScript")
+        self.client.force_login(self.admin)
+        content = json.dumps({
+            "blocks": [
+                {"type": "code", "data": {"code": "<script>alert('sample')</script>"}},
+                {
+                    "type": "paragraph",
+                    "data": {"text": '<script>alert("xss")</script><b onclick="alert(1)">본문</b>'},
+                },
+            ]
+        })
+
+        response = self.client.post(
+            reverse("blog:dashboard-posts"),
+            data={
+                "title": "JS 코드 예제",
+                "category": category.pk,
+                "content": content,
+                "contentMarkdown": "```js\nalert('sample')\n```",
+                "status": "draft",
+                "tags": "javascript",
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        saved = json.loads(Post.objects.get(pk=response.json()["id"]).content)
+        code = saved["blocks"][0]["data"]["code"]
+        paragraph = saved["blocks"][1]["data"]["text"]
+        self.assertEqual(code, "<script>alert('sample')</script>")
+        self.assertNotIn("<script", paragraph)
+        self.assertNotIn("onclick", paragraph)
+        self.assertEqual(paragraph, "alert(&quot;xss&quot;)<b>본문</b>")
 
     def test_dashboard_summary_is_empty_for_regular_user_without_project(self):
         self.client.force_login(self.regular_user)

@@ -51,8 +51,12 @@
 .postFilterButton:focus-visible,
 .postFilterButton.isActive {
   color: var(--header-color);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
+}
+
+.postFilterButton:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 3px;
 }
 
 .postCategory {

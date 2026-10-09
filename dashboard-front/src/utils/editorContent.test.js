@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { editorJsToPlainText } from "./editorContent.js";
+import { editorJsToPlainText, normalizeEditorDocument } from "./editorContent.js";
 
 test("Editor.js 문서에서 요약용 텍스트를 만든다", () => {
   const text = editorJsToPlainText({
@@ -35,4 +35,21 @@ test("이미지 설명과 첨부파일 이름을 요약에 포함한다", () => 
   });
 
   assert.equal(text, "구성 화면\n\nreport.pdf");
+});
+
+test("H1~H6 도구 블록을 표준 header 블록으로 변환한다", () => {
+  const document = normalizeEditorDocument({
+    time: 123,
+    blocks: [
+      { type: "heading1", data: { text: "큰 제목", level: 2 } },
+      { type: "heading6", data: { text: "작은 제목" } },
+      { type: "paragraph", data: { text: "본문" } },
+    ],
+  });
+
+  assert.deepEqual(document.blocks, [
+    { type: "header", data: { text: "큰 제목", level: 1 } },
+    { type: "header", data: { text: "작은 제목", level: 6 } },
+    { type: "paragraph", data: { text: "본문" } },
+  ]);
 });

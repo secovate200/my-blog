@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://secovate200.local/schemas/security-event-v1.json",
+  "title": "Security Event v1",
+  "type": "object",
+  "required": ["event", "schema_version", "provider", "engine", "request_id", "method", "path", "rule_id", "severity", "attack_type", "action"],
+  "properties": {
+    "event": {"const": "waf_detection"},
+    "schema_version": {"const": 1},
+    "provider": {"type": "string"},
+    "engine": {"type": "string"},
+    "request_id": {"type": "string"},
+    "method": {"type": "string"},
+    "path": {"type": "string"},
+    "status_code": {"type": "integer"},
+    "rule_id": {"type": "string"},
+    "severity": {"type": "string"},
+    "attack_type": {"type": "string"},
+    "action": {"enum": ["detected", "blocked", "allowed"]},
+    "matched_field": {"type": "string", "maxLength": 300},
+    "matched_data": {"type": "string", "maxLength": 300},
+    "client_ip": {"type": "string"},
+    "client_fingerprint": {"type": "string"}
+  },
+  "additionalProperties": true
+}
