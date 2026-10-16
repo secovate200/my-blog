@@ -1,3 +1,4 @@
+/** 게시글 조회, 검색, 페이지네이션을 관리하고 편집 화면 진입점을 제공합니다. */
 import { useEffect, useState } from "react";
 import { ContentHeader } from "../../components/Layout/ContentHeader";
 import TableList from "../../components/UI/TableList";

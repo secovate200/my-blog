@@ -1,3 +1,4 @@
+/** 권한에 따라 공개·초안 수를 구분해 카테고리 현황을 보여줍니다. */
 import { FaFolderOpen } from "react-icons/fa6";
 import { ContentHeader } from "../../components/Layout/ContentHeader";
 import { useEffect, useState } from "react";

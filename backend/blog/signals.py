@@ -1,3 +1,5 @@
+"""사용자 생성과 계정 접근 상태 생성 사이의 데이터 일관성을 보장합니다."""
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models.signals import post_save, pre_save

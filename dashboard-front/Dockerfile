@@ -1,9 +1,21 @@
-FROM node:22-alpine
+FROM node:22-alpine AS build
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
+ARG VITE_BLOG_URL=http://localhost:5173
+ENV VITE_BLOG_URL=${VITE_BLOG_URL}
+RUN npm run build
 
-EXPOSE 5174
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+FROM nginx:1.27-alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -qO- http://127.0.0.1/healthz || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

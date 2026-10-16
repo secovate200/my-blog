@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -33,14 +35,29 @@ def load_local_env(path):
 load_local_env(BASE_DIR.parent / '.env')
 
 
+def env_bool(name, default=False):
+    """환경 변수의 대표적인 참/거짓 표현을 안전하게 해석합니다."""
+
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&+x$i2r8!dn!ieh940br!80-7k8)#%q6$i!mn4$kkt(_=ttgty'
+# 운영 환경에서는 디버그 화면이 설정값과 내부 경로를 노출할 수 있으므로 기본값을 끕니다.
+DEBUG = env_bool('DJANGO_DEBUG', False)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# 운영 서명 키를 이미지에 포함하면 모든 배포가 같은 신뢰 루트를 공유하게 됩니다.
+# 개발 모드에서만 임시 키를 허용하고, 운영에서는 누락 즉시 시작을 중단합니다.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-local-development-only'
+    else:
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY 환경 변수가 필요합니다.')
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -80,6 +97,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'config.middleware.ObservabilityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
@@ -120,7 +138,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        # 운영 컨테이너에서는 이미지가 교체되어도 DB가 유지되는 별도 볼륨을 사용합니다.
+        'NAME': os.environ.get('DJANGO_DB_PATH', BASE_DIR / 'db.sqlite3'),
     }
 }
 
@@ -166,8 +185,37 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# WhiteNoise가 압축 파일을 함께 생성하되 기존 관리자 스크립트 URL은 유지합니다.
+# 사용자 정의 관리자 템플릿과 테스트가 고정 URL을 공유하므로 이름 변경은 피합니다.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# TLS 종료 프록시가 전달하는 프로토콜을 신뢰해 Django가 HTTPS 요청을 정확히 판별합니다.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# 다단 프록시 뒤에서도 외부 호스트와 포트를 사용해 페이지네이션 URL을 생성합니다.
+USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = env_bool('DJANGO_SECURE_SSL_REDIRECT', not DEBUG)
+# 내부 컨테이너 헬스체크는 TLS 종료 프록시를 거치지 않으므로 리다이렉트에서 제외합니다.
+SECURE_REDIRECT_EXEMPT = [r'^health/$']
+SESSION_COOKIE_SECURE = env_bool('DJANGO_SESSION_COOKIE_SECURE', not DEBUG)
+CSRF_COOKIE_SECURE = env_bool('DJANGO_CSRF_COOKIE_SECURE', not DEBUG)
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    'DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS',
+    False,
+)
+SECURE_HSTS_PRELOAD = env_bool('DJANGO_SECURE_HSTS_PRELOAD', False)
 
 # Django SmartBase Admin
 SB_ADMIN_CONFIGURATION = 'config.sbadmin_config.SBAdminConfiguration'

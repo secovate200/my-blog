@@ -8,7 +8,7 @@ function ServerError({
   return (
     <main className="errorPage errorPageServer">
       <section className="errorPanel" aria-labelledby="server-error-title">
-        <p className="errorEyebrow">SERVER ERROR</p>
+        <p className="errorEyebrow">서버 오류</p>
         <strong className="errorCode">{status}</strong>
         <div className="serverSignal" aria-hidden="true">
           <span />

@@ -1,3 +1,7 @@
+/**
+ * 일반 글과 프로젝트 글의 상세 조회, Editor.js 렌더링, 목차 생성을 담당합니다.
+ * 목차와 본문이 같은 글을 요청하므로 캐시와 진행 중 Promise를 공유해 중복 요청을 막습니다.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { FiArrowLeft, FiCalendar, FiTag } from "react-icons/fi";
 import { Link, useParams, useSearchParams } from "react-router-dom";

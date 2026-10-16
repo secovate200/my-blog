@@ -88,7 +88,9 @@
                     const add = document.createElement("button");
                     add.type = "button";
                     add.className = "btn btn-primary btn-small";
-                    add.textContent = "추가";
+                    // 기존 멤버도 검색 성공 여부를 확인할 수 있게 표시하되 중복 추가는 막습니다.
+                    add.textContent = user.is_member ? "이미 멤버" : "추가";
+                    add.disabled = user.is_member;
                     add.addEventListener("click", async () => {
                         add.disabled = true;
                         try {
@@ -124,8 +126,26 @@
         document.querySelectorAll("[data-project-member-manager]").forEach(initializeManager);
         document.querySelectorAll("[data-project-member-popup]").forEach(initializePopup);
     };
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, {once: true});
-    else initialize();
-    document.body.addEventListener("htmx:afterSwap", initialize);
-    document.body.addEventListener("SBModalShown", initialize);
+    const start = () => {
+        // 스크립트가 <head>에서 먼저 실행될 때 document.body는 아직 존재하지 않습니다.
+        // 모든 이벤트 연결을 DOM 준비 이후로 미뤄 초기화 도중 오류가 발생하지 않게 합니다.
+        initialize();
+        document.body.addEventListener("htmx:afterSwap", initialize);
+        document.body.addEventListener("SBModalShown", initialize);
+
+        // SmartBase 모달은 HTMX 이벤트 없이 응답 HTML을 innerHTML로 삽입할 수 있습니다.
+        // 특정 라이브러리 이벤트에만 의존하면 팝업은 보이지만 검색 버튼에는 이벤트가
+        // 연결되지 않으므로, 실제 DOM 추가를 기준으로 새 팝업을 빠짐없이 초기화합니다.
+        const popupObserver = new MutationObserver((mutations) => {
+            const hasAddedElement = mutations.some((mutation) => mutation.addedNodes.length > 0);
+            if (hasAddedElement) initialize();
+        });
+        popupObserver.observe(document.body, {childList: true, subtree: true});
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start, {once: true});
+    } else {
+        start();
+    }
 })();

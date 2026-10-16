@@ -79,6 +79,12 @@ class MyBlogOverviewWidget(SBAdminDashboardHtmlWidget):
         if is_superuser:
             quick_actions[0:0] = [
                 {
+                    "label": "블로그 프로필 편집",
+                    "description": "소개, 로고와 SNS 링크를 관리합니다.",
+                    "url": reverse("sb_admin:blog_siteprofile_change", args=[1]),
+                    "icon": "user",
+                },
+                {
                     "label": "새 게시글 작성",
                     "description": "블로그에 게시할 글을 작성합니다.",
                     "url": reverse("sb_admin:blog_post_add"),

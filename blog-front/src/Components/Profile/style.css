@@ -46,7 +46,7 @@
   gap: 6px;
 }
 
-.profileSocials button {
+.profileSocials a {
   width: 30px;
   height: 30px;
   padding: 0;
@@ -58,6 +58,7 @@
   border-radius: 0;
   color: var(--text-color);
   background: var(--third-background);
+  text-decoration: none;
 }
 
 .profileSocials svg {

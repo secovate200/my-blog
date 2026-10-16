@@ -1,3 +1,4 @@
+/** 사용자가 관리할 수 있는 프로젝트별 연구 글 목록을 조회하고 전환합니다. */
 import { useEffect, useState } from "react";
 import { FaLock, FaPenToSquare } from "react-icons/fa6";
 import { fetchAdminResearchPosts } from "../../api";

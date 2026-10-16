@@ -19,6 +19,30 @@ SAFE_EXTRA_FIELDS = {
     "client_fingerprint",
 }
 
+DJANGO_REQUEST_MESSAGE_PREFIXES = {
+    "Bad Request": "잘못된 요청",
+    "Unauthorized": "인증되지 않은 요청",
+    "Forbidden": "접근이 거부된 요청",
+    "Not Found": "요청한 경로를 찾을 수 없음",
+    "Method Not Allowed": "허용되지 않은 HTTP 메서드",
+    "Too Many Requests": "요청 횟수 제한 초과",
+    "Internal Server Error": "서버 내부 오류",
+}
+
+
+def localize_log_message(record):
+    """Django가 생성한 영문 HTTP 로그도 운영자가 읽기 쉬운 한글로 바꿉니다."""
+
+    message = record.getMessage()
+    if record.name not in {"django.request", "django.server"}:
+        return message
+
+    for english, korean in DJANGO_REQUEST_MESSAGE_PREFIXES.items():
+        if message.startswith(f"{english}:"):
+            path = message.split(":", 1)[1].strip()
+            return f"{korean}: {path}"
+    return message
+
 
 def record_to_event(record):
     event = {
@@ -27,7 +51,7 @@ def record_to_event(record):
         "environment": getattr(settings, "OBSERVABILITY_ENVIRONMENT", "development"),
         "level": record.levelname.lower(),
         "logger": record.name,
-        "message": record.getMessage(),
+        "message": localize_log_message(record),
     }
     for key, value in record.__dict__.items():
         if key in SAFE_EXTRA_FIELDS and key not in event:
@@ -43,7 +67,7 @@ class StructuredJsonFormatter(logging.Formatter):
 
 
 class OpenObserveHandler(logging.Handler):
-    """Send logs out of band. Queue saturation or collector failure never blocks requests."""
+    """로그 전송 장애가 실제 HTTP 요청을 지연시키지 않도록 비동기로 전송합니다."""
 
     _queue = queue.Queue(maxsize=1000)
     _worker = None

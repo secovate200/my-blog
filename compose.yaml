@@ -15,39 +15,43 @@ services:
       - openobserve-data:/data
 
   blog-front:
-    build: ./blog-front
+    build:
+      context: ./blog-front
+      args:
+        VITE_DASHBOARD_URL: ${VITE_DASHBOARD_URL:-https://dashboard.example.com}
+    restart: unless-stopped
     ports:
-      - "5173:5173"
-    volumes:
-      - ./blog-front:/app
-      - blog-front-node-modules:/app/node_modules
-    environment:
-      VITE_API_PROXY_TARGET: http://waf:8080
-      VITE_DASHBOARD_URL: ${VITE_DASHBOARD_URL:-http://localhost:5175}
+      - "${BLOG_BIND_ADDRESS:-0.0.0.0}:${BLOG_PORT:-5173}:80"
     depends_on:
-      - waf
+      waf:
+        condition: service_started
+        # 백엔드 교체로 WAF가 다시 시작되면 프런트도 내부 주소를 새로 해석합니다.
+        restart: true
 
   dashboard-front:
-    build: ./dashboard-front
+    build:
+      context: ./dashboard-front
+      args:
+        VITE_BLOG_URL: ${BLOG_FRONTEND_URL:-https://blog.example.com}
+    restart: unless-stopped
     ports:
-      - "5175:5174"
-    volumes:
-      - ./dashboard-front:/app
-      - dashboard-front-node-modules:/app/node_modules
-    environment:
-      VITE_API_PROXY_TARGET: http://waf:8080
+      # 개인 관리 화면은 기본적으로 서버 로컬에서만 열고, VPN·터널을 통해 접근합니다.
+      - "${DASHBOARD_BIND_ADDRESS:-127.0.0.1}:${DASHBOARD_PORT:-5175}:80"
     depends_on:
-      - waf
+      waf:
+        condition: service_started
+        restart: true
 
   waf:
     image: owasp/modsecurity-crs:4.25-nginx-lts
     restart: unless-stopped
     ports:
-      - "8000:8080"
+      # WAF 진단 포트도 외부에 직접 노출하지 않습니다.
+      - "127.0.0.1:${WAF_PORT:-8000}:8080"
     environment:
       BACKEND: http://backend:8000
       PORT: "8080"
-      MODSEC_RULE_ENGINE: ${WAF_MODE:-DetectionOnly}
+      MODSEC_RULE_ENGINE: ${WAF_MODE:-On}
       MODSEC_AUDIT_ENGINE: RelevantOnly
       MODSEC_AUDIT_LOG: /var/log/modsecurity/audit/audit.json
       MODSEC_AUDIT_LOG_FORMAT: JSON
@@ -64,9 +68,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+        # 이미지 교체로 backend IP가 바뀌면 WAF가 이전 주소를 유지하지 않게 합니다.
+        restart: true
 
   backend:
     build: ./backend
+    restart: unless-stopped
     expose:
       - "8000"
     healthcheck:
@@ -76,9 +83,18 @@ services:
       retries: 12
       start_period: 10s
     volumes:
-      - ./backend:/app
-      - waf-audit:/var/log/waf:ro
+      - backend-data:/data
+      - backend-media:/app/media
     environment:
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY를 설정해야 합니다}
+      DJANGO_DB_PATH: /data/db.sqlite3
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-true}
+      DJANGO_SESSION_COOKIE_SECURE: ${DJANGO_SESSION_COOKIE_SECURE:-true}
+      DJANGO_CSRF_COOKIE_SECURE: ${DJANGO_CSRF_COOKIE_SECURE:-true}
+      DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-31536000}
+      DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS: ${DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS:-true}
+      DJANGO_SECURE_HSTS_PRELOAD: ${DJANGO_SECURE_HSTS_PRELOAD:-false}
       DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
       DISCORD_SIGNUP_WEBHOOK_URL: ${DISCORD_SIGNUP_WEBHOOK_URL:-}
       DISCORD_ALERT_WEBHOOK_URL: ${DISCORD_ALERT_WEBHOOK_URL:-}
@@ -87,7 +103,7 @@ services:
       OPENOBSERVE_ORG: ${OPENOBSERVE_ORG:-default}
       OPENOBSERVE_STREAM: ${OPENOBSERVE_STREAM:-blog_logs}
       OPENOBSERVE_USER: ${OPENOBSERVE_USER:-admin@example.com}
-      OPENOBSERVE_PASSWORD: ${OPENOBSERVE_PASSWORD:-change-this-password}
+      OPENOBSERVE_PASSWORD: ${OPENOBSERVE_PASSWORD:?OPENOBSERVE_PASSWORD를 설정해야 합니다}
       OBSERVABILITY_ENVIRONMENT: ${OBSERVABILITY_ENVIRONMENT:-development}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,waf}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:5175,http://127.0.0.1:5175}
@@ -101,12 +117,60 @@ services:
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
       EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
+    command: >-
+      sh -c "set -e;
+      python manage.py migrate --noinput;
+      python manage.py bootstrap_openobserve || true;
+      exec gunicorn config.wsgi:application
+      --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3}
+      --threads ${GUNICORN_THREADS:-2} --timeout ${GUNICORN_TIMEOUT:-60}
+      --access-logfile - --error-logfile -"
     depends_on:
       - openobserve
 
+  observability-agent:
+    build: ./backend
+    restart: unless-stopped
+    command:
+      [
+        "python",
+        "manage.py",
+        "observability_agent",
+        "--interval",
+        "30",
+        "--waf-log-path",
+        "/var/log/waf/audit/audit.json",
+      ]
+    volumes:
+      - backend-data:/data
+      - waf-audit:/var/log/waf:ro
+    environment:
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY를 설정해야 합니다}
+      DJANGO_DB_PATH: /data/db.sqlite3
+      DISCORD_ALERT_WEBHOOK_URL: ${DISCORD_ALERT_WEBHOOK_URL:-}
+      WAF_DISCORD_COOLDOWN_SECONDS: ${WAF_DISCORD_COOLDOWN_SECONDS:-60}
+      OPENOBSERVE_URL: http://openobserve:5080
+      OPENOBSERVE_ORG: ${OPENOBSERVE_ORG:-default}
+      OPENOBSERVE_STREAM: ${OPENOBSERVE_STREAM:-blog_logs}
+      OPENOBSERVE_USER: ${OPENOBSERVE_USER:-admin@example.com}
+      OPENOBSERVE_PASSWORD: ${OPENOBSERVE_PASSWORD:?OPENOBSERVE_PASSWORD를 설정해야 합니다}
+      OBSERVABILITY_ENVIRONMENT: ${OBSERVABILITY_ENVIRONMENT:-production}
+    depends_on:
+      backend:
+        condition: service_healthy
+      waf:
+        condition: service_started
+      blog-front:
+        condition: service_healthy
+      dashboard-front:
+        condition: service_healthy
+      openobserve:
+        condition: service_started
+
 volumes:
-  blog-front-node-modules:
-  dashboard-front-node-modules:
   openobserve-data:
   waf-audit:
+  backend-data:
+  backend-media:
 

@@ -1,3 +1,7 @@
+/**
+ * 공개 프로젝트와 소속 글을 조회하고 태그별 탐색을 제공합니다.
+ * 서버 데이터와 선택 상태를 분리해 프로젝트 전환 시 이전 필터가 섞이지 않게 합니다.
+ */
 import { useEffect, useState } from "react";
 import {
   FiArrowLeft,

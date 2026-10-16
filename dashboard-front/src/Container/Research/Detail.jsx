@@ -1,3 +1,4 @@
+/** 프로젝트 연구 글의 조회·작성·수정 흐름과 공개 상태 입력을 관리합니다. */
 import { useEffect, useRef, useState } from "react";
 import { FaArrowLeft, FaDownload, FaLock, FaPen } from "react-icons/fa6";
 import { fetchAdminResearchPost } from "../../api";

@@ -1,3 +1,4 @@
+/** 공개 프로젝트와 프로젝트 글 조회 API를 캡슐화합니다. */
 import apiClient from "./client";
 
 export async function getProjects() {

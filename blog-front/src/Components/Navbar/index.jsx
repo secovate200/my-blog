@@ -1,3 +1,4 @@
+/** 반응형 탐색 메뉴와 키보드·바깥 클릭 닫기 동작을 관리합니다. */
 import { useEffect, useRef, useState } from "react";
 import "./style.css";
 import { BiMoon, BiSearch, BiSun } from "react-icons/bi";

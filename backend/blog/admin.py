@@ -10,13 +10,14 @@ from django_smartbase_admin.engine.field import SBAdminField
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Case, CharField, Q, Value, When
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template.loader import render_to_string
 from django.urls import path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from .forms import PostAdminForm, ProjectPostAdminForm
+from .forms import PostAdminForm, ProjectPostAdminForm, SiteProfileAdminForm
 from .tasks import enqueue_contact_reply
 
 # 관리자 화면에 등록할 블로그 모델들을 가져옵니다.
@@ -28,6 +29,7 @@ from .models import (
     Project,
     ProjectMember,
     ProjectPost,
+    SiteProfile,
     Tag,
     UserAccessStatus,
 )
@@ -165,6 +167,47 @@ class SuperuserOnlyAdmin(SBAdmin):
     def has_delete_permission(self, request, obj=None):
         # Superuser에게만 데이터 삭제를 허용합니다.
         return request.user.is_superuser
+
+
+@admin.register(SiteProfile, site=sb_admin_site)
+class SiteProfileAdmin(SuperuserOnlyAdmin):
+    form = SiteProfileAdminForm
+    fieldsets = (
+        ("프로필 정보", {"fields": (("name", "role"), "bio")} ),
+        ("로고", {"fields": ("logo_preview", "logo")} ),
+        ("SNS 링크", {"fields": (("instagram_url", "github_url", "facebook_url"),)}),
+    )
+    readonly_fields = ("logo_preview",)
+
+    def get_change_view_context(self, request, object_id):
+        context = super().get_change_view_context(request, object_id)
+        context["show_back_button"] = False
+        return context
+
+    def changelist_view(self, request, extra_context=None):
+        SiteProfile.objects.get_or_create(pk=1)
+        return HttpResponseRedirect(reverse("sb_admin:blog_siteprofile_change", args=[1]))
+
+    @admin.display(description="현재 로고")
+    def logo_preview(self, obj):
+        if not obj or not obj.logo:
+            return "등록된 로고가 없습니다. 공개 블로그에서는 기본 로고를 사용합니다."
+        return format_html(
+            '<div style="display:flex;align-items:center;gap:16px">'
+            '<img src="{}?v={}" alt="현재 프로필 로고" '
+            'style="width:112px;height:112px;object-fit:contain;background:#111827;'
+            'border:1px solid #475569;border-radius:12px;padding:8px">'
+            '<span>{}</span></div>',
+            reverse("blog:site-profile-logo"),
+            int(obj.updated_at.timestamp()) if obj.updated_at else 0,
+            obj.logo.name.rsplit("/", 1)[-1],
+        )
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser and not SiteProfile.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(BlogAsset, site=sb_admin_site)
@@ -338,7 +381,8 @@ class ProjectMemberInline(ProjectMemberUserAutocompleteMixin, SBAdminTableInline
 class ProjectAdmin(SBAdmin):
     class Media:
         css = {"all": ("admin/project-member-manager.css",)}
-        js = ("admin/project-member-manager.js",)
+        # 쿼리 버전을 올려 이전 초기화 오류가 담긴 브라우저 캐시를 확실히 갱신합니다.
+        js = ("admin/project-member-manager.js?v=20261015-3",)
 
     # 프로젝트 목록에 관리에 필요한 필드들을 표시합니다.
     list_display = (
@@ -466,17 +510,21 @@ class ProjectAdmin(SBAdmin):
         if not query:
             return JsonResponse({"users": []})
 
-        users = (
-            User.objects.filter(
-                Q(username__icontains=query) | Q(email__icontains=query)
-            )
-            .exclude(project_memberships__project=project)
-            .order_by("username")[:20]
-        )
+        # 기존 멤버를 검색 결과에서 숨기면 사용자는 검색 자체가 실패했다고 오해할 수 있습니다.
+        # 검색 결과는 모두 보여주고, 이미 등록된 사용자인지만 별도로 표시합니다.
+        member_ids = set(project.members.values_list("pk", flat=True))
+        users = User.objects.filter(
+            Q(username__icontains=query) | Q(email__icontains=query)
+        ).order_by("username")[:20]
         return JsonResponse(
             {
                 "users": [
-                    {"id": user.pk, "username": user.username, "email": user.email}
+                    {
+                        "id": user.pk,
+                        "username": user.username,
+                        "email": user.email,
+                        "is_member": user.pk in member_ids,
+                    }
                     for user in users
                 ]
             }
@@ -827,7 +875,7 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
         "id",
         "name",
         "email",
-        "status",
+        "live_status",
         "created_at",
         "replied_at",
     )
@@ -838,6 +886,7 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
         "name",
         "email",
         "message",
+        "delivery_status_tracker",
         "replied_by",
         "replied_at",
         "receipt_sent_at",
@@ -848,7 +897,7 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
     fieldsets = (
         ("문의자", {"fields": (("name", "email"),)}),
         ("문의 내용", {"fields": ("message",)}),
-        ("답변", {"fields": ("status", "reply")}),
+        ("답변", {"fields": ("status", "reply", "delivery_status_tracker")}),
         (
             "처리 정보",
             {
@@ -867,6 +916,92 @@ class ContactMessageAdmin(SuperuserOnlyAdmin):
     def has_add_permission(self, request):
         # 문의는 공개 Contact 폼을 통해서만 생성합니다.
         return False
+
+    def get_urls(self):
+        """현재 문의의 메일 발송 상태를 조회하는 관리자 전용 URL을 추가합니다."""
+        custom_urls = [
+            path(
+                "<path:object_id>/delivery-status/",
+                self.admin_site.admin_view(self.delivery_status),
+                name="blog_contactmessage_delivery_status",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    @admin.display(description="이메일 발송 상태")
+    def delivery_status_tracker(self, obj):
+        """프런트 폴링에 필요한 URL과 현재 발송 상태를 안전하게 전달합니다."""
+        if obj is None or not obj.pk:
+            return "답변을 저장하면 이메일 발송 상태를 확인할 수 있습니다."
+
+        return self._render_delivery_status(
+            obj,
+            self._delivery_status_message(obj),
+            refresh_on_complete=True,
+        )
+
+    @admin.display(description="상태", ordering="status")
+    def live_status(self, obj_or_id, value=None, **additional_data):
+        """Django와 SmartBase 양쪽 호출 규격으로 실시간 상태 셀을 표시합니다."""
+        # 기본 Django 관리자는 모델 객체를 넘기지만 SmartBase 목록 JSON은 객체 ID와
+        # 계산된 값을 따로 넘깁니다. 두 화면에서 같은 메서드를 안전하게 재사용하기
+        # 위해 ID로 받은 경우에만 상태에 필요한 최소 필드를 다시 조회합니다.
+        if isinstance(obj_or_id, ContactMessage):
+            obj = obj_or_id
+        else:
+            obj = ContactMessage.objects.only("id", "status").get(pk=obj_or_id)
+        return self._render_delivery_status(
+            obj,
+            obj.get_status_display(),
+            refresh_on_complete=False,
+        )
+
+    def _render_delivery_status(self, obj, label, *, refresh_on_complete):
+        """상세 화면과 목록에서 함께 사용하는 실시간 상태 요소를 만듭니다."""
+        status_url = reverse(
+            "admin:blog_contactmessage_delivery_status",
+            args=[obj.pk],
+        )
+        return format_html(
+            '<span data-contact-delivery-status data-status-url="{}" '
+            'data-status="{}" data-refresh-on-complete="{}" '
+            'role="status" aria-live="polite">{}</span>',
+            status_url,
+            obj.status,
+            "true" if refresh_on_complete else "false",
+            label,
+        )
+
+    def delivery_status(self, request, object_id):
+        """메일 발송 완료 여부만 반환해 문의 상세 화면이 즉시 갱신되게 합니다."""
+        contact = self.get_object(request, object_id)
+        if contact is None:
+            return JsonResponse({"message": "문의를 찾을 수 없습니다."}, status=404)
+        if not self.has_view_or_change_permission(request, contact):
+            raise PermissionDenied
+
+        return JsonResponse(
+            {
+                "status": contact.status,
+                "status_label": contact.get_status_display(),
+                "is_complete": contact.status == ContactMessage.Status.REPLIED,
+                "message": self._delivery_status_message(contact),
+                "email_sent_at": (
+                    contact.email_sent_at.isoformat()
+                    if contact.email_sent_at
+                    else None
+                ),
+            }
+        )
+
+    @staticmethod
+    def _delivery_status_message(contact):
+        """관리자가 기술 용어 없이 현재 처리 단계를 이해할 문구를 만듭니다."""
+        if contact.status == ContactMessage.Status.REPLIED:
+            return "이메일 발송이 완료되어 답변 완료 상태입니다."
+        if contact.status == ContactMessage.Status.IN_PROGRESS:
+            return "답변 이메일을 발송하고 있습니다. 완료되면 자동으로 갱신됩니다."
+        return "아직 답변 이메일을 발송하지 않았습니다."
 
     def save_model(self, request, obj, form, change):
         should_send = bool(obj.reply.strip()) and (

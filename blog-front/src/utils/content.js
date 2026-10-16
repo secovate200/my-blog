@@ -1,3 +1,7 @@
+/**
+ * Editor.js JSON을 요약용 일반 텍스트로 변환합니다.
+ * 이전 형식의 문자열도 지원하여 콘텐츠 형식 전환 중 호환성을 유지합니다.
+ */
 export function parseEditorContent(content = "") {
   try {
     const data = JSON.parse(content);

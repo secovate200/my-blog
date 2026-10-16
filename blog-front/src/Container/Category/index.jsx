@@ -1,3 +1,4 @@
+/** 게시글에서 카테고리·태그 빈도를 계산해 탐색 가능한 분류 목록을 만듭니다. */
 import { useEffect, useMemo, useState } from "react";
 import { FiFolder, FiTag } from "react-icons/fi";
 import { Link } from "react-router-dom";

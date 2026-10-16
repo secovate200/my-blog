@@ -1,3 +1,4 @@
+/** 문의 입력, 비동기 전송, 성공·실패 피드백을 하나의 폼 흐름으로 관리합니다. */
 import { useState } from "react";
 import { FiMail, FiSend, FiUser } from "react-icons/fi";
 import { createContactMessage } from "../../api/contact";

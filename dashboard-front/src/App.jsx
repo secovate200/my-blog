@@ -1,3 +1,7 @@
+/**
+ * 관리자 앱의 인증 상태, 권한 기반 메뉴, 지연 로딩 페이지 전환을 조율합니다.
+ * 개별 페이지가 인증 규칙을 중복 구현하지 않도록 앱 경계에서 접근을 판정합니다.
+ */
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Sidebar } from "./components/Layout/Sidebar";
 import { Profile } from "./components/Layout/Profile";

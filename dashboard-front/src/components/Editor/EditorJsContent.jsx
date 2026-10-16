@@ -1,3 +1,8 @@
+/**
+ * 저장된 Editor.js 문서를 읽기 전용 React 요소로 변환합니다.
+ * 오래된 문자열과 알 수 없는 블록도 대체 표현으로 처리해 일부 콘텐츠 오류가
+ * 상세 화면 전체의 렌더링 실패로 번지지 않게 합니다.
+ */
 function parseDocument(content = "") {
   try {
     const document = JSON.parse(content);

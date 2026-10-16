@@ -1,3 +1,4 @@
+/** 요약 통계와 최근 글을 불러와 각 관리 영역으로 이동하는 대시보드를 구성합니다. */
 import React, { useEffect, useState } from "react";
 import { ContentHeader } from "../../components/Layout/ContentHeader";
 import { Card } from "../../components/UI/Card";

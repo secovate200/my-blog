@@ -1,3 +1,4 @@
+/** 쿠키와 로컬 저장소를 함께 사용해 공개·관리자 앱의 테마 선택을 공유합니다. */
 const THEME_COOKIE = "secovate-theme";
 const THEME_STORAGE_KEY = "secovate-theme";
 const LEGACY_STORAGE_KEYS = ["blog-theme", "theme"];

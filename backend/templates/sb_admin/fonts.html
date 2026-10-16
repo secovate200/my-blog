@@ -1,6 +1,8 @@
 {% load static %}
 
 {% block content %}
+    {# 모든 SmartBase 화면이 포함하는 공통 템플릿에서 문의 상태 추적기를 한 번만 로드합니다. #}
+    <script src="{% static 'admin/contact-reply-status.js' %}?v=20261015-1" defer></script>
     <script>
         (function () {
             const cookieName = 'secovate-theme';
@@ -18,11 +20,24 @@
                 localStorage.removeItem('theme');
                 localStorage.removeItem('blog-theme');
             };
+            const applyTheme = (theme) => {
+                if (!isTheme(theme)) return;
+                const root = document.documentElement;
+                // MutationObserver가 같은 값을 반복해서 기록하면 관리자 화면이 멈출 수
+                // 있으므로, 실제 값이 달라질 때에만 DOM 속성을 변경합니다.
+                if (root.dataset.theme !== theme) root.dataset.theme = theme;
+                // SmartBase/SimpleUI의 기본 팔레트는 data-theme가 아니라 dark 클래스를
+                // 기준으로 동작하므로 두 표현을 항상 함께 갱신해야 화면 일부만 밝게
+                // 남는 현상을 막을 수 있습니다.
+                const shouldUseDarkTheme = theme === 'dark';
+                if (root.classList.contains('dark') !== shouldUseDarkTheme) {
+                    root.classList.toggle('dark', shouldUseDarkTheme);
+                }
+                if (root.style.colorScheme !== theme) root.style.colorScheme = theme;
+            };
             const applySharedTheme = () => {
                 const sharedTheme = readCookie();
-                if (isTheme(sharedTheme) && document.documentElement.dataset.theme !== sharedTheme) {
-                    document.documentElement.dataset.theme = sharedTheme;
-                }
+                if (isTheme(sharedTheme)) applyTheme(sharedTheme);
             };
 
             const initialTheme = readCookie()
@@ -30,13 +45,23 @@
                 || localStorage.getItem('theme')
                 || localStorage.getItem('blog-theme');
             if (isTheme(initialTheme)) {
-                document.documentElement.dataset.theme = initialTheme;
+                applyTheme(initialTheme);
                 saveTheme(initialTheme);
             }
 
-            new MutationObserver(() => {
-                saveTheme(document.documentElement.dataset.theme);
-            }).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+            new MutationObserver((mutations) => {
+                const root = document.documentElement;
+                // SmartBase가 class를 바꾼 경우에는 class를, 공통 테마 코드가
+                // data-theme을 바꾼 경우에는 data-theme을 원본으로 삼아 양쪽을 맞춥니다.
+                const hasClassMutation = mutations.some(({attributeName}) => attributeName === 'class');
+                const theme = hasClassMutation
+                    ? (root.classList.contains('dark') ? 'dark' : 'light')
+                    : root.dataset.theme;
+                if (isTheme(theme)) {
+                    applyTheme(theme);
+                    saveTheme(theme);
+                }
+            }).observe(document.documentElement, {attributes: true, attributeFilter: ['class', 'data-theme']});
 
             window.addEventListener('focus', applySharedTheme);
             window.addEventListener('storage', applySharedTheme);

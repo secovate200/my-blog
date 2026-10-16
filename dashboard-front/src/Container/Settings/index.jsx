@@ -1,3 +1,4 @@
+/** 계정 정보 표시, 테마 선택, 비밀번호 변경을 설정 화면으로 묶습니다. */
 import { useState } from "react";
 import { FaCheck, FaShieldHalved, FaUser } from "react-icons/fa6";
 import { changePassword as changeAccountPassword } from "../../api";

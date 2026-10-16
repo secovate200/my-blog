@@ -19,6 +19,11 @@ blog_menu = SBAdminMenuItem(
         SBAdminMenuItem(view_id="blog_category"),
         SBAdminMenuItem(view_id="blog_tag"),
         SBAdminMenuItem(view_id="blog_blogasset"),
+        SBAdminMenuItem(
+            view_id="blog_siteprofile",
+            label="블로그 프로필",
+            icon="User-business",
+        ),
     ],
 )
 

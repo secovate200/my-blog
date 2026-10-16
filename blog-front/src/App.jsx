@@ -1,3 +1,8 @@
+/**
+ * 공개 블로그의 전역 레이아웃과 라우팅을 조립합니다.
+ * 테마 동기화 같은 앱 수준 상태를 한 번만 관리해 페이지마다 같은 부수 효과가
+ * 반복되지 않도록 합니다.
+ */
 import { useEffect, useState } from "react";
 import Home from "./Container/Home";
 import Category from "./Container/Category";

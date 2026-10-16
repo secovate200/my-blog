@@ -10,6 +10,8 @@ from .views import (
     ProjectDetailAPIView,
     ProjectListAPIView,
     ProjectPostDetailAPIView,
+    SiteProfileAPIView,
+    site_profile_logo,
     dashboard_csrf,
     dashboard_change_password,
     dashboard_current_user,
@@ -29,6 +31,8 @@ from .views import (
 app_name = "blog"
 
 urlpatterns = [
+    path("profile/", SiteProfileAPIView.as_view(), name="site-profile"),
+    path("profile/logo/", site_profile_logo, name="site-profile-logo"),
     path("auth/csrf/", dashboard_csrf, name="dashboard-csrf"),
     path("auth/password/", dashboard_change_password, name="dashboard-change-password"),
     path("auth/login/", dashboard_login, name="dashboard-login"),

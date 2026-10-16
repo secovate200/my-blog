@@ -1,3 +1,9 @@
+"""문의·가입 상태 변화에 맞는 이메일 본문을 구성하고 발송합니다.
+
+호출 위치와 무관하게 제목·수신자·인라인 이미지 정책을 일관되게 유지하도록
+메일 생성과 발송 책임을 이 모듈에 모았습니다.
+"""
+
 import json
 import logging
 import smtplib
@@ -57,7 +63,7 @@ def send_contact_notification(contact):
         with urlopen(request, timeout=5) as response:
             return 200 <= response.status < 300
     except (HTTPError, URLError, TimeoutError, OSError):
-        logger.exception("Discord contact notification failed for contact %s", contact.pk)
+        logger.exception("문의 %s의 Discord 알림 발송에 실패했습니다.", contact.pk)
         return False
 
 
@@ -94,7 +100,7 @@ def send_signup_notification(user):
         with urlopen(request, timeout=5) as response:
             return 200 <= response.status < 300
     except (HTTPError, URLError, TimeoutError, OSError):
-        logger.exception("Discord signup notification failed for user %s", user.pk)
+        logger.exception("사용자 %s의 가입 Discord 알림 발송에 실패했습니다.", user.pk)
         return False
 
 
@@ -142,7 +148,7 @@ def send_account_approval_email(user):
         email.send(fail_silently=False)
         return True
     except (BadHeaderError, OSError, smtplib.SMTPException, ValueError):
-        logger.exception("Account approval email failed for user %s", user.pk)
+        logger.exception("사용자 %s의 계정 승인 이메일 발송에 실패했습니다.", user.pk)
         return False
 
 def send_contact_receipt(contact):
@@ -195,7 +201,7 @@ def send_contact_receipt(contact):
         contact.save(update_fields=["receipt_sent_at"])
         return True
     except (BadHeaderError, OSError, smtplib.SMTPException, ValueError):
-        logger.exception("Contact receipt email failed for contact %s", contact.pk)
+        logger.exception("문의 %s의 접수 확인 이메일 발송에 실패했습니다.", contact.pk)
         return False
 
 
@@ -254,5 +260,5 @@ def send_contact_reply(contact):
         email.send(fail_silently=False)
         return True
     except (BadHeaderError, OSError, smtplib.SMTPException, ValueError):
-        logger.exception("Contact reply email failed for contact %s", contact.pk)
+        logger.exception("문의 %s의 답변 이메일 발송에 실패했습니다.", contact.pk)
         return False

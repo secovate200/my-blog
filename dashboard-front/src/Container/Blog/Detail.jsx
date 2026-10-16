@@ -1,3 +1,4 @@
+/** 게시글 상세 조회와 작성·수정 모드를 하나의 데이터 흐름으로 연결합니다. */
 import { useEffect, useState } from "react";
 import { FaArrowLeft, FaPen, FaTrash } from "react-icons/fa6";
 import { deletePost, fetchAdminPost } from "../../api";

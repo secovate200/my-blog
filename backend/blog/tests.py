@@ -1,19 +1,54 @@
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
 import json
+from pathlib import Path
 import tempfile
 from unittest.mock import patch
 
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from .content import sanitize_content
-from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectMember, ProjectPost, Tag, UserAccessStatus
+from .models import BlogAsset, Category, ContactMessage, Post, Project, ProjectMember, ProjectPost, SiteProfile, Tag, UserAccessStatus
 from .notifications import send_contact_receipt, send_contact_reply
 from .tasks import _run_contact_reply
 from config.waf_events import normalize_waf_audit
+
+
+class SiteProfileTests(TestCase):
+    def test_public_profile_api_returns_database_values(self):
+        profile, _ = SiteProfile.objects.get_or_create(pk=1)
+        profile.name = "보안 연구자"
+        profile.role = "BUG HUNTER"
+        profile.bio = "취약점 연구 기록"
+        profile.instagram_url = "https://instagram.com/example"
+        profile.github_url = "https://github.com/example"
+        profile.facebook_url = "https://facebook.com/example"
+        profile.save()
+
+        response = self.client.get(reverse("blog:site-profile"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["name"], "보안 연구자")
+        self.assertEqual(response.json()["github_url"], "https://github.com/example")
+        self.assertIsNone(response.json()["logo_url"])
+
+    def test_profile_logo_is_served_through_public_endpoint(self):
+        with tempfile.TemporaryDirectory(dir=settings.BASE_DIR.parent / "tmp") as media_root:
+            with self.settings(MEDIA_ROOT=media_root):
+                profile, _ = SiteProfile.objects.get_or_create(pk=1)
+                profile.logo = SimpleUploadedFile("logo.png", b"fake-png", content_type="image/png")
+                profile.save()
+
+                response = self.client.get(reverse("blog:site-profile-logo"))
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.headers["Content-Type"], "image/png")
+                response.close()
 
 
 class ObservabilityTests(TestCase):
@@ -193,7 +228,11 @@ class BlogAssetTests(TestCase):
         )
         self.client.force_login(user)
 
-        with tempfile.TemporaryDirectory() as media_root:
+        # Windows 샌드박스의 시스템 임시 폴더는 파일 생성 권한이 제한될 수 있습니다.
+        # 프로젝트 안의 쓰기 가능한 임시 폴더를 사용해 실제 업로드 로직만 안정적으로 검증합니다.
+        test_temp_root = Path(settings.BASE_DIR) / ".test-temp"
+        test_temp_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=test_temp_root) as media_root:
             with self.settings(MEDIA_ROOT=media_root):
                 response = self.client.post(
                     reverse("blog:asset-upload"),
@@ -210,6 +249,10 @@ class BlogAssetTests(TestCase):
                 download = self.client.get(reverse("blog:asset-download", args=[asset.pk]))
                 self.assertEqual(download.status_code, 200)
                 self.assertIn("attachment", download["Content-Disposition"])
+                # FileResponse는 스트리밍이 끝날 때 파일을 닫습니다. Windows에서는
+                # 열린 파일이 남아 있으면 임시 MEDIA_ROOT를 삭제할 수 없으므로,
+                # 테스트가 응답의 생명 주기를 명시적으로 마무리해야 합니다.
+                download.close()
 
     def test_missing_attachment_file_returns_404(self):
         user = get_user_model().objects.create_superuser(
@@ -238,6 +281,7 @@ class DashboardAuthenticationTests(TestCase):
         )
         self.regular_user = get_user_model().objects.create_user(
             username="regular-user",
+            email="regular@example.com",
             password="secure-password",
         )
 
@@ -276,23 +320,20 @@ class DashboardAuthenticationTests(TestCase):
 
         enqueue.assert_called_once_with(self.regular_user.pk)
 
-    def test_staff_user_can_login_with_username_and_read_session(self):
+    def test_username_cannot_be_used_to_login(self):
         response = self.client.post(
             reverse("blog:dashboard-login"),
             data={"account": "dashboard-admin", "password": "secure-password"},
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["username"], "dashboard-admin")
-        current = self.client.get(reverse("blog:dashboard-current-user"))
-        self.assertEqual(current.status_code, 200)
-        self.assertTrue(current.json()["is_superuser"])
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("이메일", response.json()["detail"])
 
     def test_staff_user_can_login_with_email(self):
         response = self.client.post(
             reverse("blog:dashboard-login"),
-            data={"account": "dashboard@example.com", "password": "secure-password"},
+            data={"email": "dashboard@example.com", "password": "secure-password"},
             content_type="application/json",
         )
 
@@ -367,7 +408,7 @@ class DashboardAuthenticationTests(TestCase):
     def test_regular_user_can_login_to_dashboard_without_admin_access(self):
         response = self.client.post(
             reverse("blog:dashboard-login"),
-            data={"account": "regular-user", "password": "secure-password"},
+            data={"email": "regular@example.com", "password": "secure-password"},
             content_type="application/json",
         )
 
@@ -821,6 +862,96 @@ class ProjectApiTests(TestCase):
 
 
 class ContactMessageTests(TestCase):
+    def test_admin_layout_loads_contact_reply_status_script(self):
+        """SmartBase 목록에서도 실시간 상태 추적 스크립트를 항상 로드합니다."""
+        admin = get_user_model().objects.create_superuser(
+            username="script-admin",
+            email="script-admin@example.com",
+            password="password",
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse("admin:blog_contactmessage_changelist"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "admin/contact-reply-status.js")
+
+    def test_smartbase_contact_list_can_render_live_status(self):
+        """SmartBase 목록 호출 규격에서도 상태 열이 오류 없이 렌더링됩니다."""
+        from django_smartbase_admin.admin.site import sb_admin_site
+
+        contact = ContactMessage.objects.create(
+            name="방문자",
+            email="visitor@example.com",
+            message="문의 내용",
+            status=ContactMessage.Status.IN_PROGRESS,
+        )
+        contact_admin = sb_admin_site._registry[ContactMessage]
+
+        rendered_status = contact_admin.live_status(
+            contact.pk,
+            contact.status,
+        )
+
+        self.assertIn("확인 중", rendered_status)
+        self.assertIn("data-contact-delivery-status", rendered_status)
+
+    def test_admin_can_poll_contact_reply_delivery_status(self):
+        """백그라운드 메일 완료 전후 상태를 관리자 화면이 조회할 수 있습니다."""
+        admin = get_user_model().objects.create_superuser(
+            username="status-admin",
+            email="status-admin@example.com",
+            password="password",
+        )
+        contact = ContactMessage.objects.create(
+            name="방문자",
+            email="visitor@example.com",
+            message="문의 내용",
+            reply="답변 내용",
+            status=ContactMessage.Status.IN_PROGRESS,
+        )
+        self.client.force_login(admin)
+        status_url = reverse(
+            "admin:blog_contactmessage_delivery_status",
+            args=[contact.pk],
+        )
+
+        sending_response = self.client.get(status_url)
+        contact.status = ContactMessage.Status.REPLIED
+        contact.email_sent_at = timezone.now()
+        contact.save(update_fields=("status", "email_sent_at"))
+        completed_response = self.client.get(status_url)
+
+        self.assertEqual(sending_response.status_code, 200)
+        self.assertEqual(sending_response.json()["status"], "in_progress")
+        self.assertFalse(sending_response.json()["is_complete"])
+        self.assertEqual(completed_response.status_code, 200)
+        self.assertEqual(completed_response.json()["status"], "replied")
+        self.assertTrue(completed_response.json()["is_complete"])
+        self.assertIsNotNone(completed_response.json()["email_sent_at"])
+
+    def test_contact_reply_delivery_status_requires_admin_permission(self):
+        """문의 처리 상태 API가 일반 사용자에게 노출되지 않게 보호합니다."""
+        user = get_user_model().objects.create_user(
+            username="status-viewer",
+            password="password",
+        )
+        contact = ContactMessage.objects.create(
+            name="방문자",
+            email="visitor@example.com",
+            message="문의 내용",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            reverse(
+                "admin:blog_contactmessage_delivery_status",
+                args=[contact.pk],
+            )
+        )
+
+        self.assertEqual(response.status_code, 302)
+
     @patch("blog.tasks.send_contact_reply", return_value=True)
     def test_background_reply_marks_contact_as_replied_after_email_succeeds(self, send_reply):
         admin = get_user_model().objects.create_superuser(

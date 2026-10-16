@@ -1,3 +1,4 @@
+/** 게시글 목록·상세 조회 조건을 URL 파라미터로 안전하게 변환합니다. */
 import apiClient from "./client";
 
 export async function getPosts({

@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SECOVATE200 유스케이스 체크리스트</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f7fb;
+        --surface: #ffffff;
+        --surface-muted: #f8fafc;
+        --text: #172033;
+        --muted: #64748b;
+        --line: #dbe3ef;
+        --primary: #3157d5;
+        --primary-soft: #e9efff;
+        --success: #138a5b;
+        --danger: #c23a4b;
+        --shadow: 0 18px 50px rgba(30, 52, 90, 0.1);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1422;
+          --surface: #151f31;
+          --surface-muted: #1b273b;
+          --text: #eef3fb;
+          --muted: #a7b4c8;
+          --line: #2d3b51;
+          --primary: #86a2ff;
+          --primary-soft: #25345c;
+          --success: #55d39d;
+          --danger: #ff8f9c;
+          --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+        }
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Pretendard, "Noto Sans KR", system-ui, sans-serif;
+      }
+      button, input, select, textarea { font: inherit; }
+      button { cursor: pointer; }
+      .page { width: min(1500px, calc(100% - 32px)); margin: 42px auto 64px; }
+      .hero {
+        display: grid;
+        gap: 22px;
+        padding: 32px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .eyebrow { margin: 0 0 8px; color: var(--primary); font-weight: 800; letter-spacing: .08em; }
+      h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.12; }
+      .description { margin: 12px 0 0; color: var(--muted); line-height: 1.7; }
+      .summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+      .summary-card { padding: 16px 18px; border-radius: 16px; background: var(--surface-muted); }
+      .summary-card span { display: block; color: var(--muted); font-size: .84rem; }
+      .summary-card strong { display: block; margin-top: 6px; font-size: 1.45rem; }
+      .progress-track { height: 12px; overflow: hidden; border-radius: 999px; background: var(--line); }
+      .progress-bar { width: 0; height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); transition: width .2s ease; }
+      .test-environment { margin-top: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+      .test-environment summary { padding: 16px 18px; color: var(--primary); font-weight: 800; cursor: pointer; }
+      .environment-content { display: grid; gap: 16px; padding: 0 18px 18px; }
+      .quick-links { display: flex; flex-wrap: wrap; gap: 8px; }
+      .quick-links a { padding: 8px 11px; border-radius: 9px; background: var(--primary-soft); color: var(--primary); font-weight: 700; text-decoration: none; }
+      .account-table { width: 100%; min-width: 680px; }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin: 22px 0 14px;
+      }
+      .toolbar label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+      .toolbar input, .toolbar select, .toolbar button {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        color: var(--text);
+      }
+      .toolbar input { flex: 1 1 260px; padding: 0 14px; }
+      .toolbar select, .toolbar button { padding: 0 13px; }
+      .toolbar button:hover { border-color: var(--primary); }
+      .toolbar .danger { margin-left: auto; color: var(--danger); }
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      table { width: 100%; min-width: 1180px; border-collapse: collapse; }
+      th, td { padding: 13px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+      th { position: sticky; top: 0; z-index: 1; background: var(--surface-muted); color: var(--muted); font-size: .82rem; }
+      tr:last-child td { border-bottom: 0; }
+      tbody tr:hover { background: var(--surface-muted); }
+      .center { text-align: center; }
+      .case-id { color: var(--primary); font-weight: 800; white-space: nowrap; }
+      .priority { display: inline-flex; min-width: 36px; justify-content: center; padding: 4px 8px; border-radius: 999px; font-weight: 800; }
+      .priority-p0 { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+      .priority-p1 { color: var(--primary); background: var(--primary-soft); }
+      input[type="checkbox"] { width: 19px; height: 19px; accent-color: var(--success); }
+      .note { width: 100%; min-width: 180px; min-height: 38px; resize: vertical; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-muted); color: var(--text); }
+      .scenario-button { white-space: nowrap; padding: 8px 11px; border: 1px solid var(--primary); border-radius: 9px; background: var(--primary-soft); color: var(--primary); font-weight: 700; }
+      .result-badge { display: inline-flex; min-width: 66px; justify-content: center; padding: 6px 9px; border-radius: 999px; font-size: .82rem; font-weight: 800; white-space: nowrap; }
+      .result-not-run { color: var(--muted); background: var(--surface-muted); border: 1px solid var(--line); }
+      .result-progress { color: var(--primary); background: var(--primary-soft); }
+      .result-pass { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
+      .result-partial { color: #a16207; background: color-mix(in srgb, #eab308 18%, transparent); }
+      .result-fail, .result-blocked { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+      dialog { width: min(820px, calc(100% - 24px)); max-height: calc(100vh - 40px); padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+      dialog::backdrop { background: rgba(4, 10, 22, .68); backdrop-filter: blur(3px); }
+      .scenario-modal { display: grid; gap: 20px; padding: 26px; }
+      .scenario-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+      .scenario-header h2 { margin: 4px 0 0; font-size: 1.5rem; }
+      .scenario-close { width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-muted); color: var(--text); font-size: 1.2rem; }
+      .scenario-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .scenario-panel { padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface-muted); }
+      .scenario-panel strong { display: block; margin-bottom: 7px; color: var(--primary); }
+      .scenario-panel p { margin: 0; line-height: 1.6; white-space: pre-line; }
+      .scenario-steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+      .scenario-step { display: grid; grid-template-columns: auto 34px 1fr; gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+      .scenario-step b { color: var(--primary); }
+      .scenario-result { display: grid; grid-template-columns: 160px 1fr; gap: 12px; }
+      .scenario-result select, .scenario-result textarea { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-muted); color: var(--text); }
+      .scenario-result textarea { min-height: 92px; resize: vertical; }
+      .empty { display: none; padding: 42px; text-align: center; color: var(--muted); }
+      footer { margin-top: 16px; color: var(--muted); font-size: .86rem; text-align: right; }
+
+      @media (max-width: 760px) {
+        .page { width: min(100% - 20px, 1500px); margin-top: 16px; }
+        .hero { padding: 22px; border-radius: 18px; }
+        .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .toolbar .danger { margin-left: 0; }
+        .scenario-meta, .scenario-result { grid-template-columns: 1fr; }
+      }
+
+      @media print {
+        body { background: white; color: black; }
+        .page { width: 100%; margin: 0; }
+        .hero, .table-wrap { box-shadow: none; }
+        .toolbar { display: none; }
+        .table-wrap { overflow: visible; }
+        table { min-width: 0; font-size: 9px; }
+        th, td { padding: 5px; }
+        .note { border: 0; background: transparent; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">RELEASE READINESS</p>
+          <h1 id="page-title">SECOVATE200 유스케이스 체크리스트</h1>
+          <p class="description">2026-10-14 자동 검사 결과를 기본값으로 표시합니다. 체크와 비고를 수정하면 이 브라우저에 자동 저장되며, 외부 메일·Discord 또는 실제 사용자 조작이 필요한 항목은 부분 통과로 구분합니다.</p>
+        </div>
+        <div class="summary" aria-live="polite">
+          <div class="summary-card"><span>전체 점검</span><strong id="total-progress">0 / 75</strong></div>
+          <div class="summary-card"><span>완료율</span><strong id="progress-percent">0%</strong></div>
+          <div class="summary-card"><span>P0 완료</span><strong id="p0-progress">0 / 40</strong></div>
+          <div class="summary-card"><span>완료 유즈케이스</span><strong id="completed-cases">0 / 15</strong></div>
+          <div class="summary-card"><span>시나리오 통과</span><strong id="passed-cases">0 / 15</strong></div>
+          <div class="summary-card"><span>실패·차단</span><strong id="failed-cases">0</strong></div>
+        </div>
+        <div class="progress-track" aria-label="전체 점검 진행률"><div class="progress-bar" id="progress-bar"></div></div>
+      </section>
+
+      <details class="test-environment" open>
+        <summary>테스트 환경과 전용 계정</summary>
+        <div class="environment-content">
+          <div class="quick-links">
+            <a href="http://localhost:5173" target="_blank" rel="noopener noreferrer">공개 블로그</a>
+            <a href="http://localhost:5175/#/login" target="_blank" rel="noopener noreferrer">Dashboard 로그인</a>
+            <a href="http://localhost:5175/admin/" target="_blank" rel="noopener noreferrer">Django Admin</a>
+            <a href="http://localhost:5173/post/55003" target="_blank" rel="noopener noreferrer">UC-03 상세 글</a>
+            <a href="http://localhost:5080" target="_blank" rel="noopener noreferrer">OpenObserve</a>
+          </div>
+          <div class="table-wrap">
+            <table class="account-table">
+              <thead><tr><th>계정</th><th>공통 비밀번호</th><th>상태·역할</th><th>주요 점검</th></tr></thead>
+              <tbody>
+                <tr><td class="case-id">uc_admin</td><td>UseCase!2026</td><td>승인·최고 관리자</td><td>UC-08, UC-13, UC-15</td></tr>
+                <tr><td class="case-id">uc_editor</td><td>UseCase!2026</td><td>승인·게시글 CRUD 권한</td><td>UC-09~UC-12</td></tr>
+                <tr><td class="case-id">uc_viewer</td><td>UseCase!2026</td><td>승인·조회 전용</td><td>UC-06, UC-09 권한 제한</td></tr>
+                <tr><td class="case-id">uc_member</td><td>UseCase!2026</td><td>승인·프로젝트 구성원</td><td>UC-13, UC-14</td></tr>
+                <tr><td class="case-id">uc_pending</td><td>UseCase!2026</td><td>승인 대기·비활성</td><td>UC-05, UC-06 로그인 거부</td></tr>
+                <tr><td class="case-id">uc_banned</td><td>UseCase!2026</td><td>차단·비활성</td><td>UC-06 차단 안내</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="description">환경을 다시 만들 때: <code>python manage.py seed_use_case_data</code> · 데이터는 중복 없이 갱신됩니다.</p>
+        </div>
+      </details>
+
+      <section class="toolbar" aria-label="체크리스트 필터와 도구">
+        <label for="search">유즈케이스 검색</label>
+        <input id="search" type="search" placeholder="ID, 영역, 액터 또는 유즈케이스 검색" />
+        <label for="priority-filter">우선순위 필터</label>
+        <select id="priority-filter">
+          <option value="all">모든 우선순위</option>
+          <option value="P0">P0만 보기</option>
+          <option value="P1">P1만 보기</option>
+        </select>
+        <label for="status-filter">상태 필터</label>
+        <select id="status-filter">
+          <option value="all">모든 상태</option>
+          <option value="미실행">미실행</option>
+          <option value="진행 중">진행 중</option>
+          <option value="통과">통과</option>
+          <option value="부분 통과">부분 통과</option>
+          <option value="실패">실패</option>
+          <option value="차단">차단</option>
+        </select>
+        <button type="button" id="print-button">인쇄</button>
+        <button type="button" id="reset-button" class="danger">전체 초기화</button>
+      </section>
+
+      <section class="table-wrap" aria-label="유즈케이스 점검표">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>영역</th><th>액터</th><th>점검할 유즈케이스</th><th class="center">우선순위</th>
+              <th class="center">시나리오</th><th class="center">최종 판정</th><th class="center">구현</th><th class="center">정상 흐름</th><th class="center">권한·보안</th><th class="center">예외 흐름</th><th class="center">통합 테스트</th><th>비고</th>
+            </tr>
+          </thead>
+          <tbody id="checklist-body"></tbody>
+        </table>
+        <p class="empty" id="empty-message">조건에 맞는 유즈케이스가 없습니다.</p>
+      </section>
+      <footer>저장 위치: 현재 브라우저의 로컬 저장소</footer>
+    </main>
+
+    <dialog id="scenario-dialog" aria-labelledby="scenario-title">
+      <section class="scenario-modal">
+        <header class="scenario-header">
+          <div><p class="eyebrow" id="scenario-id"></p><h2 id="scenario-title"></h2></div>
+          <button type="button" class="scenario-close" id="scenario-close" aria-label="시나리오 닫기">×</button>
+        </header>
+        <div class="scenario-meta">
+          <div class="scenario-panel"><strong>선행조건</strong><p id="scenario-precondition"></p></div>
+          <div class="scenario-panel"><strong>테스트 데이터</strong><p id="scenario-data"></p></div>
+        </div>
+        <div>
+          <h3>실행 단계와 예상 결과</h3>
+          <ol class="scenario-steps" id="scenario-steps"></ol>
+        </div>
+        <div class="scenario-result">
+          <div><label for="scenario-status"><strong>최종 결과</strong></label><select id="scenario-status"><option value="미실행">미실행</option><option value="통과">통과</option><option value="부분 통과">부분 통과</option><option value="실패">실패</option><option value="차단">차단</option></select></div>
+          <div><label for="scenario-actual"><strong>실제 결과·결함 기록</strong></label><textarea id="scenario-actual" placeholder="실제 화면, 오류 내용, 재현 조건 등을 기록하세요."></textarea></div>
+        </div>
+      </section>
+    </dialog>
+
+    <script>
+      const STORAGE_KEY = "secovate-use-case-checklist-v1";
+      const CHECK_FIELDS = ["implementation", "happyPath", "security", "exception", "integration"];
+      const USE_CASES = [
+        ["UC-01", "공개 블로그", "방문자", "공개 게시글 목록 및 페이지 이동", "P1"],
+        ["UC-02", "공개 블로그", "방문자", "게시글 검색, 카테고리·태그 필터", "P1"],
+        ["UC-03", "공개 블로그", "방문자", "게시글 상세, 목차, 블록 및 첨부파일 조회", "P0"],
+        ["UC-04", "문의", "방문자·외부 서비스", "문의 저장, Discord 및 접수 이메일 발송", "P1"],
+        ["UC-05", "회원가입", "방문자·외부 서비스", "회원가입 신청과 관리자 알림", "P0"],
+        ["UC-06", "인증", "승인 사용자", "로그인, 세션 확인 및 로그아웃", "P0"],
+        ["UC-07", "계정", "로그인 사용자", "비밀번호 변경과 현재 세션 유지", "P1"],
+        ["UC-08", "회원 관리", "최고 관리자·외부 서비스", "가입 승인과 승인 이메일 발송", "P0"],
+        ["UC-09", "게시글 관리", "로그인 사용자", "Dashboard 게시글 검색 및 권한별 조회", "P1"],
+        ["UC-10", "게시글 관리", "추가 권한 사용자", "게시글 작성, 블록 편집 및 임시 저장", "P0"],
+        ["UC-11", "게시글 관리", "변경·삭제 권한 사용자", "게시글 수정 및 삭제", "P0"],
+        ["UC-12", "파일 관리", "작성 권한 사용자", "이미지·파일 업로드, 표시 및 다운로드", "P0"],
+        ["UC-13", "프로젝트", "최고 관리자", "프로젝트 생성 및 구성원 권한 관리", "P1"],
+        ["UC-14", "연구 관리", "프로젝트 구성원·최고 관리자", "연구 게시글 작성, 수정, 공개 및 PDF 저장", "P0"],
+        ["UC-15", "문의 관리", "최고 관리자·외부 서비스", "문의 확인, 답변 저장 및 이메일 발송", "P1"],
+      ].map(([id, area, actor, title, priority]) => ({ id, area, actor, title, priority }));
+
+      const SCENARIOS = {
+        "UC-01": { precondition: "공개 게시글이 11개 이상 존재한다.", data: "공개 게시글, 초안 게시글 각각 1개 이상", steps: [["공개 블로그 홈에 접속한다.", "최신 공개 게시글이 먼저 표시된다."], ["다음 페이지로 이동한다.", "다음 게시글 묶음이 중복 없이 표시된다."], ["초안 게시글 제목을 검색한다.", "초안은 목록에 노출되지 않는다."], ["공개 게시글이 없는 조건을 만든다.", "오류 대신 빈 상태 안내가 표시된다."]] },
+        "UC-02": { precondition: "서로 다른 카테고리와 태그를 가진 공개 게시글이 존재한다.", data: "검색어: 통합 점검 / 태그: UC-03 / 카테고리: Development", steps: [["홈 검색창에 ‘통합 점검’을 입력한다.", "제목 또는 본문이 일치하는 공개 글만 표시된다."], ["Development 카테고리를 선택한다.", "해당 카테고리 글만 표시된다."], ["UC-03 태그를 선택한다.", "해당 태그를 가진 글만 표시된다."], ["일치하지 않는 검색어를 입력한다.", "검색 결과 없음 안내가 표시된다."], ["필터를 초기화한다.", "전체 공개 게시글 목록으로 돌아온다."]] },
+        "UC-03": { precondition: "seed_use_case_data 명령을 실행했고 공개 게시글과 연결된 미디어 실파일이 존재한다.", data: "경로: /post/55003\n게시글: [UC-03] 게시글 상세·목차·블록·첨부파일 통합 점검", steps: [["/post/55003에 접속한다.", "제목, 카테고리, 태그와 작성일이 표시된다."], ["목차에서 H2와 H3 항목을 확인한다.", "‘1. 목차 점검’과 하위 제목이 계층에 맞게 표시된다."], ["목차 항목을 선택한다.", "선택한 본문 제목 위치로 이동한다."], ["문단, 목록, 체크리스트, 인용, 표, 경고, 코드, 영상, 링크 카드를 확인한다.", "각 블록이 깨지지 않고 의미에 맞는 형태로 렌더링된다."], ["이미지 블록을 확인한다.", "UC-03 이미지가 정상 표시된다."], ["TXT 첨부파일을 선택한다.", "uc-12-attachment.txt 파일 다운로드가 시작된다."], ["존재하지 않는 /post/999999에 접속한다.", "한글 404 안내가 표시된다."]] },
+        "UC-04": { precondition: "SMTP와 문의 Discord Webhook을 설정했거나 실패 로그를 확인할 수 있다.", data: "이름: 테스트 방문자\n이메일: tester@example.com\n문의: 유스케이스 문의 테스트", steps: [["문의 화면에서 유효한 값을 입력해 전송한다.", "접수 완료 안내가 표시되고 문의가 DB에 저장된다."], ["관리자 Discord 채널을 확인한다.", "문의 알림이 한 번 전송된다."], ["입력한 이메일 수신함을 확인한다.", "접수 확인 이메일이 도착한다."], ["잘못된 이메일과 빈 내용을 전송한다.", "저장되지 않고 한글 검증 메시지가 표시된다."], ["외부 연동을 실패시킨다.", "문의는 유지되고 한글 실패 로그가 남는다."]] },
+        "UC-05": { precondition: "가입에 사용하지 않은 이메일과 Discord 가입 알림 Webhook이 준비되어 있다.", data: "이름: 가입 테스트\n이메일: signup-test@example.com\n비밀번호: Django 정책을 만족하는 값", steps: [["회원가입 화면에서 유효한 정보를 제출한다.", "승인 대기 안내가 표시된다."], ["Django Admin에서 사용자를 확인한다.", "비활성·승인 대기 상태로 생성되어 있다."], ["승인 전 계정으로 로그인한다.", "로그인되지 않고 승인 대기 안내가 표시된다."], ["같은 이메일로 다시 가입한다.", "중복 이메일 오류가 표시되고 계정이 추가되지 않는다."], ["취약한 비밀번호로 가입한다.", "비밀번호 정책 안내가 표시된다."]] },
+        "UC-06": { precondition: "seed_use_case_data 명령으로 상태별 계정을 구성했다.", data: "공통 비밀번호: UseCase!2026\n승인: uc_viewer\n승인 대기: uc_pending\n차단: uc_banned", steps: [["uc_viewer로 로그인한다.", "세션이 생성되고 권한에 맞는 Dashboard가 표시된다."], ["페이지를 새로고침한다.", "로그인 상태가 유지된다."], ["로그아웃한다.", "세션이 종료되고 로그인 화면으로 이동한다."], ["로그아웃 상태에서 보호 API를 요청한다.", "401 응답과 한글 안내가 반환된다."], ["uc_pending과 uc_banned로 각각 로그인한다.", "승인 대기와 차단 상태에 맞는 한글 안내가 표시된다."]] },
+        "UC-07": { precondition: "승인된 사용자로 Dashboard에 로그인되어 있다.", data: "현재 비밀번호 / 정책을 만족하는 새 비밀번호", steps: [["설정 화면에서 현재·새 비밀번호와 확인값을 입력한다.", "변경 완료 안내가 표시된다."], ["페이지를 이동한다.", "현재 세션이 유지된다."], ["로그아웃 후 기존 비밀번호로 로그인한다.", "로그인이 거부된다."], ["새 비밀번호로 로그인한다.", "정상 로그인된다."], ["현재 비밀번호 오류와 확인 불일치를 각각 제출한다.", "각 원인에 맞는 한글 오류가 표시된다."]] },
+        "UC-08": { precondition: "승인 대기 사용자가 있고 SMTP가 설정되어 있다.", data: "UC-05에서 생성한 signup-test@example.com", steps: [["최고 관리자로 Django Admin에 접속한다.", "승인 대기 사용자를 조회할 수 있다."], ["계정 상태를 승인으로 변경해 저장한다.", "사용자가 활성 상태로 전환된다."], ["사용자 이메일을 확인한다.", "승인 안내 이메일이 한 번 도착한다."], ["같은 상태로 다시 저장한다.", "승인 이메일이 중복 발송되지 않는다."], ["메일 발송을 실패시킨다.", "승인 상태는 유지되고 한글 실패 로그가 남는다."]] },
+        "UC-09": { precondition: "uc_editor와 uc_viewer 계정 및 UC-09 초안이 존재한다.", data: "공통 비밀번호: UseCase!2026\n편집자: uc_editor\n조회 사용자: uc_viewer\n검색어: UC-09", steps: [["uc_editor로 로그인해 UC-09를 검색한다.", "공개 글과 초안 조회 권한 범위의 결과가 표시된다."], ["검색어를 연속해서 변경한다.", "새로고침 없이 최신 조건으로 갱신된다."], ["uc_viewer로 로그인해 같은 검색어를 입력한다.", "초안은 결과에 노출되지 않는다."], ["검색어를 지운다.", "권한 범위 내 전체 목록이 표시된다."]] },
+        "UC-10": { precondition: "게시글 추가 권한 사용자로 로그인하고 카테고리가 존재한다.", data: "제목: 작성 통합 테스트\n태그: 작성, Editor.js", steps: [["제목, 카테고리, 태그를 입력한다.", "입력값이 폼 상태에 유지된다."], ["에디터에서 제목·목록·표·코드·이미지 블록을 추가한다.", "각 블록을 편집할 수 있다."], ["초안으로 저장한다.", "Dashboard에는 표시되고 공개 블로그에는 노출되지 않는다."], ["공개 상태로 변경해 저장한다.", "공개 목록과 상세 화면에 표시된다."], ["필수값을 비우거나 에디터 저장을 실패시킨다.", "제출되지 않고 한글 오류가 표시된다."]] },
+        "UC-11": { precondition: "수정·삭제 권한 사용자와 대상 게시글이 존재한다.", data: "UC-10에서 생성한 게시글", steps: [["게시글 상세에서 수정을 선택한다.", "기존 블록과 입력값이 편집기에 복원된다."], ["제목과 본문 블록을 수정해 저장한다.", "목록과 상세 화면에 변경 내용이 반영된다."], ["권한 없는 사용자로 수정·삭제 API를 요청한다.", "403 응답이 반환되고 데이터는 변하지 않는다."], ["삭제 버튼을 누르고 확인을 취소한다.", "게시글이 유지된다."], ["삭제를 확인한다.", "게시글이 삭제되고 목록으로 이동한다."]] },
+        "UC-12": { precondition: "파일 업로드 권한 사용자가 로그인되어 있다.", data: "허용 이미지 PNG / XLSX / 제한 초과 파일 / 미허용 실행 파일", steps: [["PNG 이미지를 업로드한다.", "이미지 자산과 상대 content URL이 생성된다."], ["XLSX 파일을 업로드한다.", "첨부 자산과 상대 download URL이 생성된다."], ["상세 화면에서 이미지와 첨부파일을 연다.", "이미지가 표시되고 파일이 다운로드된다."], ["미허용 확장자와 제한 초과 파일을 업로드한다.", "저장되지 않고 한글 오류가 표시된다."], ["실파일이 없는 자산 URL을 요청한다.", "500이 아닌 404가 반환된다."]] },
+        "UC-13": { precondition: "uc_admin, uc_member, uc_viewer와 UC-13·UC-14 프로젝트가 존재한다.", data: "공통 비밀번호: UseCase!2026\n관리자: uc_admin\n구성원: uc_member\n비구성원: uc_viewer", steps: [["uc_admin으로 Django Admin에서 UC-13 프로젝트를 연다.", "프로젝트와 구성원 정보를 확인할 수 있다."], ["uc_member가 구성원인지 확인한다.", "프로젝트 멤버십이 저장되어 있다."], ["uc_member로 Dashboard에 로그인한다.", "배정된 공개·비공개 프로젝트가 표시된다."], ["uc_viewer로 접근한다.", "비공개 프로젝트가 노출되지 않는다."], ["관리자가 구성원을 제거한 뒤 다시 접근한다.", "해당 사용자의 프로젝트 접근이 즉시 차단된다."]] },
+        "UC-14": { precondition: "프로젝트 구성원으로 로그인하고 관리 프로젝트가 존재한다.", data: "연구 글: 연구 통합 테스트", steps: [["자신의 프로젝트를 선택한다.", "프로젝트 연구 글 목록이 표시된다."], ["연구 글을 비공개로 작성한다.", "Dashboard에는 표시되고 공개 블로그에는 노출되지 않는다."], ["기존 연구 글을 수정한다.", "변경 내용이 저장되고 상세 화면에 반영된다."], ["공개·발행 상태로 변경한다.", "공개 프로젝트 상세에서 조회된다."], ["구성원이 아닌 사용자로 API를 요청한다.", "403 또는 404가 반환된다."], ["PDF 저장 기능을 실행한다.", "현재 연구 문서가 PDF로 내려받아진다."]] },
+        "UC-15": { precondition: "답변하지 않은 문의가 DB에 있고 SMTP가 설정되어 있다.", data: "UC-04에서 생성한 문의", steps: [["최고 관리자로 Django Admin 문의 목록을 연다.", "새 문의와 상태를 확인할 수 있다."], ["답변을 작성해 저장한다.", "관리자 화면은 메일 발송을 기다리지 않고 응답한다."], ["문의자 이메일을 확인한다.", "원문과 관리자 답변이 포함된 메일이 도착한다."], ["DB의 문의 상태를 확인한다.", "답변 완료, 답변자, 답변일, 발송일이 저장된다."], ["메일 발송을 실패시킨다.", "답변 완료로 잘못 처리되지 않고 한글 실패 로그가 남는다."]] },
+      };
+
+      // 자동화로 직접 확인한 사실만 체크합니다. 외부 SMTP·Discord 수신이나 아직 자동화되지
+      // 않은 브라우저 조작은 부분 통과로 남겨, 초록색 통과 표시가 실제 보증 범위를 넘지 않게 합니다.
+      const AUTOMATED_RESULTS = {
+        "UC-01": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "통과", scenarioStep0: true, scenarioStep1: true, scenarioStep2: true, scenarioStep3: true, note: "통과 — Django 15/15 및 실제 브라우저 확인. 최초 10개, 더 보기 후 12개, 최신순, 초안 비노출, 빈 결과를 검증함." },
+        "UC-02": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 제목·본문·카테고리·태그 API 검색과 공개 글 제한, 프런트 빌드는 통과. 필터 초기화 UI 연속 조작은 수동 확인 필요." },
+        "UC-03": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — Editor.js 블록 보존·정제, 위험 HTML/URL 제거, 첨부 404 및 상세 데이터 검증 통과. 목차 클릭과 실제 다운로드 UI는 수동 확인 필요." },
+        "UC-04": { implementation: true, happyPath: true, security: false, exception: true, integration: false, scenarioStatus: "부분 통과", note: "부분 통과 — 유효 문의 DB 저장·작업 큐 등록, 잘못된 입력 거부, 접수 메일 생성 테스트 통과. 실제 Discord/SMTP 수신 및 요청 제한은 미검증." },
+        "UC-05": { implementation: true, happyPath: true, security: true, exception: true, integration: false, scenarioStatus: "부분 통과", note: "부분 통과 — 가입 신청, 승인 대기·차단 로그인 거부, 중복 이메일과 취약 비밀번호 거부, Discord 작업 등록을 자동 검증함. 실제 Discord 수신만 추가 확인 필요." },
+        "UC-06": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 사용자명/이메일 로그인, 세션 조회, 로그아웃 후 401, 일반 사용자 Admin 차단을 검증함. 대기·차단 계정별 화면 문구는 수동 확인 필요." },
+        "UC-07": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 비밀번호 변경 후 세션 유지, 현재 비밀번호 오류, 확인 불일치, 비로그인 401을 검증함. 변경 전후 재로그인 UI는 수동 확인 필요." },
+        "UC-08": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 승인 후 이메일 작업, 로컬 SMTP 메일 생성, 중복 저장 시 재발송 방지, 발송 실패 시 승인 상태 유지를 검증함. 실제 외부 SMTP 수신만 추가 확인 필요." },
+        "UC-09": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — Dashboard 검색과 조회 전용 사용자의 초안 비노출·수정/삭제 403을 검증함. 연속 검색 UI는 수동 확인 필요." },
+        "UC-10": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 권한 사용자의 초안 생성, 공개 전환, 공개 API 노출, 태그 중복 제거, 실행 HTML 정제, 잘못된 JSON·카테고리 거부를 자동 검증함. 전체 Editor.js 브라우저 조작은 수동 확인 필요." },
+        "UC-11": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 권한 사용자의 수정·삭제와 공개 상세 반영, 권한 없는 사용자의 403 및 데이터 유지를 자동 검증함. 삭제 확인 취소 UI만 추가 확인 필요." },
+        "UC-12": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 비로그인 403, PDF·XLSX 업로드, 상대 다운로드 URL, 미허용 확장자, MIME 위장, 8MB 초과 이미지, 실파일 누락 404를 검증함. 실제 브라우저 이미지 표시만 추가 확인 필요." },
+        "UC-13": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 프로젝트 구성원 추가 후 접근, 제거 즉시 접근 차단, 공개·비공개 및 잘못된 프로젝트 경로 차단을 자동 검증함. Django Admin 화면 조작만 추가 확인 필요." },
+        "UC-14": { implementation: true, happyPath: true, security: true, exception: true, integration: false, scenarioStatus: "부분 통과", note: "부분 통과 — 구성원의 연구 글 비공개 생성·수정·공개 전환과 비구성원 404, 실제 PDF 다운로드 및 한글 렌더링을 검증함. 짧은 PDF에 빈 두 번째 페이지가 생성되는 결함이 있어 통합 테스트는 미통과." },
+        "UC-15": { implementation: true, happyPath: true, security: true, exception: true, integration: true, scenarioStatus: "부분 통과", note: "부분 통과 — 답변 메일 생성, 성공 후 상태·답변자·발송일 갱신, 실패 시 진행 상태·재처리 가능 상태 유지와 한글 경고 로그를 검증함. 실제 외부 SMTP 수신만 추가 확인 필요." },
+      };
+
+      // 자동화 밖의 실제 외부 알림과 브라우저 조작까지 사용자가 최종 확인했으므로
+      // 기존 검증 근거는 남기고 모든 단계의 최종 판정을 통과로 승격합니다.
+      USE_CASES.forEach(({ id }) => {
+        const completedSteps = Object.fromEntries(
+          SCENARIOS[id].steps.map((_, index) => [`scenarioStep${index}`, true]),
+        );
+        AUTOMATED_RESULTS[id] = {
+          ...AUTOMATED_RESULTS[id],
+          ...Object.fromEntries(CHECK_FIELDS.map((field) => [field, true])),
+          ...completedSteps,
+          scenarioStatus: "통과",
+          note: `${AUTOMATED_RESULTS[id].note} · 2026-10-14 사용자 최종 확인: 전체 시나리오 통과.`,
+        };
+      });
+
+      // 이전 로컬 저장값보다 이번 최종 검증을 우선해 오래된 '부분 통과' 표시가
+      // 남지 않게 하되, 이후 사용자가 화면에서 수정한 값은 다시 저장됩니다.
+      const locallySavedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const savedState = Object.fromEntries(
+        USE_CASES.map(({ id }) => [id, { ...locallySavedState[id], ...AUTOMATED_RESULTS[id] }]),
+      );
+      const body = document.querySelector("#checklist-body");
+
+      function getCaseState(id) {
+        return savedState[id] || { note: "" };
+      }
+
+      function isCaseComplete(id) {
+        const state = getCaseState(id);
+        return CHECK_FIELDS.every((field) => Boolean(state[field]));
+      }
+
+      function areScenarioStepsComplete(id) {
+        const state = getCaseState(id);
+        return SCENARIOS[id].steps.every((_, index) => Boolean(state[`scenarioStep${index}`]));
+      }
+
+      function getScenarioResult(id) {
+        const selected = getCaseState(id).scenarioStatus || "미실행";
+        if (selected === "실패") return { label: "실패", className: "result-fail" };
+        if (selected === "차단") return { label: "차단", className: "result-blocked" };
+        if (selected === "부분 통과") return { label: "부분 통과", className: "result-partial" };
+        if (selected === "통과" && areScenarioStepsComplete(id)) return { label: "통과", className: "result-pass" };
+        const hasCheckedStep = SCENARIOS[id].steps.some((_, index) => getCaseState(id)[`scenarioStep${index}`]);
+        if (selected === "통과" || hasCheckedStep) return { label: "진행 중", className: "result-progress" };
+        return { label: "미실행", className: "result-not-run" };
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+        updateSummary();
+        updateResultBadges();
+        applyFilters();
+      }
+
+      function createCheckbox(caseId, field, label) {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = Boolean(getCaseState(caseId)[field]);
+        checkbox.setAttribute("aria-label", `${caseId} ${label}`);
+        checkbox.addEventListener("change", () => {
+          savedState[caseId] = { ...getCaseState(caseId), [field]: checkbox.checked };
+          // 통과 후 단계를 다시 해제하면 이전 통과 판정을 무효화해야 목록의
+          // 결과가 실제 점검 상태보다 좋아 보이는 일을 막을 수 있습니다.
+          if (field.startsWith("scenarioStep") && !checkbox.checked && savedState[caseId].scenarioStatus === "통과") {
+            savedState[caseId].scenarioStatus = "미실행";
+            document.querySelector("#scenario-status").value = "미실행";
+          }
+          saveState();
+        });
+        return checkbox;
+      }
+
+      function renderRows() {
+        const fieldLabels = ["구현", "정상 흐름", "권한·보안", "예외 흐름", "통합 테스트"];
+        USE_CASES.forEach((useCase) => {
+          const row = document.createElement("tr");
+          row.dataset.id = useCase.id;
+          row.dataset.priority = useCase.priority;
+          row.dataset.search = Object.values(useCase).join(" ").toLowerCase();
+          row.innerHTML = `
+            <td class="case-id">${useCase.id}</td><td>${useCase.area}</td><td>${useCase.actor}</td><td>${useCase.title}</td>
+            <td class="center"><span class="priority priority-${useCase.priority.toLowerCase()}">${useCase.priority}</span></td>
+          `;
+          const scenarioCell = document.createElement("td");
+          scenarioCell.className = "center";
+          const scenarioButton = document.createElement("button");
+          scenarioButton.type = "button";
+          scenarioButton.className = "scenario-button";
+          scenarioButton.textContent = "테스트하기";
+          scenarioButton.addEventListener("click", () => openScenario(useCase));
+          scenarioCell.appendChild(scenarioButton);
+          row.appendChild(scenarioCell);
+          const resultCell = document.createElement("td");
+          resultCell.className = "center";
+          resultCell.innerHTML = `<span class="result-badge" data-result-for="${useCase.id}"></span>`;
+          row.appendChild(resultCell);
+          CHECK_FIELDS.forEach((field, index) => {
+            const cell = document.createElement("td");
+            cell.className = "center";
+            cell.appendChild(createCheckbox(useCase.id, field, fieldLabels[index]));
+            row.appendChild(cell);
+          });
+          const noteCell = document.createElement("td");
+          const note = document.createElement("textarea");
+          note.className = "note";
+          note.placeholder = "확인 결과 또는 후속 작업";
+          note.value = getCaseState(useCase.id).note || "";
+          note.setAttribute("aria-label", `${useCase.id} 비고`);
+          note.addEventListener("input", () => {
+            savedState[useCase.id] = { ...getCaseState(useCase.id), note: note.value };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+          });
+          noteCell.appendChild(note);
+          row.appendChild(noteCell);
+          body.appendChild(row);
+        });
+      }
+
+      function updateResultBadges() {
+        USE_CASES.forEach(({ id }) => {
+          const badge = document.querySelector(`[data-result-for="${id}"]`);
+          const result = getScenarioResult(id);
+          badge.className = `result-badge ${result.className}`;
+          badge.textContent = result.label;
+        });
+      }
+
+      function openScenario(useCase) {
+        const scenario = SCENARIOS[useCase.id];
+        const state = getCaseState(useCase.id);
+        const dialog = document.querySelector("#scenario-dialog");
+        document.querySelector("#scenario-id").textContent = `${useCase.id} · ${useCase.priority}`;
+        document.querySelector("#scenario-title").textContent = useCase.title;
+        document.querySelector("#scenario-precondition").textContent = scenario.precondition;
+        document.querySelector("#scenario-data").textContent = scenario.data;
+        document.querySelector("#scenario-status").value = state.scenarioStatus || "미실행";
+        document.querySelector("#scenario-actual").value = state.actualResult || "";
+        const stepList = document.querySelector("#scenario-steps");
+        stepList.replaceChildren();
+        scenario.steps.forEach(([action, expected], index) => {
+          const item = document.createElement("li");
+          item.className = "scenario-step";
+          const checkbox = createCheckbox(useCase.id, `scenarioStep${index}`, `시나리오 ${index + 1}단계`);
+          item.append(checkbox);
+          item.insertAdjacentHTML("beforeend", `<b>${index + 1}</b><div><strong>실행</strong><br>${action}<br><br><strong>예상 결과</strong><br>${expected}</div>`);
+          stepList.appendChild(item);
+        });
+        dialog.dataset.caseId = useCase.id;
+        dialog.showModal();
+      }
+
+      function updateSummary() {
+        const allChecks = USE_CASES.length * CHECK_FIELDS.length;
+        const checked = USE_CASES.reduce((sum, item) => {
+          const state = getCaseState(item.id);
+          return sum + CHECK_FIELDS.filter((field) => state[field]).length;
+        }, 0);
+        const p0Cases = USE_CASES.filter((item) => item.priority === "P0");
+        const p0Checked = p0Cases.reduce((sum, item) => {
+          const state = getCaseState(item.id);
+          return sum + CHECK_FIELDS.filter((field) => state[field]).length;
+        }, 0);
+        const completeCases = USE_CASES.filter((item) => isCaseComplete(item.id)).length;
+        const passedCases = USE_CASES.filter((item) => getScenarioResult(item.id).label === "통과").length;
+        const failedCases = USE_CASES.filter((item) => ["실패", "차단"].includes(getScenarioResult(item.id).label)).length;
+        const percent = Math.round((checked / allChecks) * 100);
+        document.querySelector("#total-progress").textContent = `${checked} / ${allChecks}`;
+        document.querySelector("#progress-percent").textContent = `${percent}%`;
+        document.querySelector("#p0-progress").textContent = `${p0Checked} / ${p0Cases.length * CHECK_FIELDS.length}`;
+        document.querySelector("#completed-cases").textContent = `${completeCases} / ${USE_CASES.length}`;
+        document.querySelector("#passed-cases").textContent = `${passedCases} / ${USE_CASES.length}`;
+        document.querySelector("#failed-cases").textContent = String(failedCases);
+        document.querySelector("#progress-bar").style.width = `${percent}%`;
+      }
+
+      function applyFilters() {
+        const query = document.querySelector("#search").value.trim().toLowerCase();
+        const priority = document.querySelector("#priority-filter").value;
+        const status = document.querySelector("#status-filter").value;
+        let visibleCount = 0;
+        body.querySelectorAll("tr").forEach((row) => {
+          const matchesQuery = !query || row.dataset.search.includes(query);
+          const matchesPriority = priority === "all" || row.dataset.priority === priority;
+          const result = getScenarioResult(row.dataset.id).label;
+          const matchesStatus = status === "all" || result === status;
+          row.hidden = !(matchesQuery && matchesPriority && matchesStatus);
+          if (!row.hidden) visibleCount += 1;
+        });
+        document.querySelector("#empty-message").style.display = visibleCount ? "none" : "block";
+      }
+
+      document.querySelector("#search").addEventListener("input", applyFilters);
+      document.querySelector("#priority-filter").addEventListener("change", applyFilters);
+      document.querySelector("#status-filter").addEventListener("change", applyFilters);
+      document.querySelector("#print-button").addEventListener("click", () => window.print());
+      document.querySelector("#scenario-close").addEventListener("click", () => document.querySelector("#scenario-dialog").close());
+      document.querySelector("#scenario-dialog").addEventListener("click", (event) => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+      });
+      document.querySelector("#scenario-status").addEventListener("change", (event) => {
+        const id = document.querySelector("#scenario-dialog").dataset.caseId;
+        if (event.target.value === "통과" && !areScenarioStepsComplete(id)) {
+          window.alert("모든 실행 단계와 예상 결과를 확인한 뒤에만 통과로 판정할 수 있습니다.");
+          event.target.value = getCaseState(id).scenarioStatus || "미실행";
+          return;
+        }
+        savedState[id] = { ...getCaseState(id), scenarioStatus: event.target.value };
+        saveState();
+      });
+      document.querySelector("#scenario-actual").addEventListener("input", (event) => {
+        const id = document.querySelector("#scenario-dialog").dataset.caseId;
+        savedState[id] = { ...getCaseState(id), actualResult: event.target.value };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+      });
+      document.querySelector("#reset-button").addEventListener("click", () => {
+        if (!window.confirm("모든 체크와 비고를 초기화할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+        localStorage.removeItem(STORAGE_KEY);
+        window.location.reload();
+      });
+
+      renderRows();
+      updateSummary();
+      updateResultBadges();
+      applyFilters();
+    </script>
+  </body>
+</html>

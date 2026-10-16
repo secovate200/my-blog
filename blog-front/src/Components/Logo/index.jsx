@@ -1,3 +1,4 @@
+/** 브랜드 문구 애니메이션의 생성·정리를 담당해 화면 이동 뒤 타이머 누수를 막습니다. */
 import { useEffect, useRef } from "react";
 import Typed from "typed.js";
 import "./style.css";

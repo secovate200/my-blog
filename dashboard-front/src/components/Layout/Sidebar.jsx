@@ -1,3 +1,4 @@
+/** 사용자 권한에 맞는 메뉴만 노출해 접근 불가능한 화면 이동을 예방합니다. */
 import React from "react";
 import { FaHome, FaBookmark, FaBook } from "react-icons/fa";
 import { FaFlask, FaGear } from "react-icons/fa6";

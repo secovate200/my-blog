@@ -1,3 +1,8 @@
+/**
+ * Editor.js 인스턴스와 커스텀 도구의 생명 주기를 React에 연결합니다.
+ * 라이브러리 객체는 ref에 보관해 재렌더링 때 중복 생성되거나 작성 내용이
+ * 초기화되지 않도록 합니다.
+ */
 import { useEffect, useRef } from "react";
 import EditorJS from "@editorjs/editorjs";
 import Header from "@editorjs/header";

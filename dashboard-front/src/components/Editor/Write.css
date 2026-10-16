@@ -81,7 +81,8 @@
   overflow-x: hidden;
   overflow-y: auto;
   margin-top: 4px;
-  padding: 18px 24px;
+  /* Editor.js 툴바는 본문 왼쪽 바깥에 배치되므로 버튼이 경계에 붙지 않을 전용 여백을 둡니다. */
+  padding: 18px 24px 18px 56px;
   border-radius: 10px;
   background: var(--third-background);
   color: var(--text-color);
@@ -111,6 +112,55 @@
 .editorjs-dashboard .ce-paragraph,
 .editorjs-dashboard .cdx-block {
   color: var(--text-color);
+}
+
+/*
+ * Editor.js가 제공하는 기본 툴바 색상은 밝은 화면을 전제로 하므로 다크 모드에서
+ * 아이콘이 배경에 묻힙니다. 앱의 테마 변수를 사용해 입력부와 조작부의 대비를
+ * 동일하게 유지하고, 키보드 사용자도 현재 포커스를 알아볼 수 있게 합니다.
+ */
+.editorjs-dashboard .ce-toolbar__plus,
+.editorjs-dashboard .ce-toolbar__settings-btn {
+  border-radius: 8px;
+  background: transparent;
+  color: var(--header-color);
+}
+
+/* 기본 세로 위치 계산은 유지하고, 드래그 핸들과 본문 사이의 가로 간격만 확보합니다. */
+.editorjs-dashboard .ce-toolbar__actions {
+  padding-right: 12px;
+}
+
+.editorjs-dashboard .ce-toolbar__plus svg,
+.editorjs-dashboard .ce-toolbar__settings-btn svg {
+  color: currentColor;
+  stroke: currentColor;
+}
+
+.editorjs-dashboard .ce-toolbar__plus:hover,
+.editorjs-dashboard .ce-toolbar__settings-btn:hover,
+.editorjs-dashboard .ce-toolbar__plus:focus-visible,
+.editorjs-dashboard .ce-toolbar__settings-btn:focus-visible {
+  background: color-mix(in srgb, var(--header-color) 14%, transparent);
+  color: var(--text-color);
+}
+
+.editorjs-dashboard .ce-toolbar__plus:focus-visible,
+.editorjs-dashboard .ce-toolbar__settings-btn:focus-visible {
+  outline: 2px solid var(--header-color);
+  outline-offset: 2px;
+}
+
+.editorjs-dashboard .ce-paragraph {
+  min-height: 1.75em;
+  line-height: 1.75;
+  caret-color: var(--header-color);
+}
+
+.editorjs-dashboard .ce-paragraph[data-placeholder]:empty::before,
+.editorjs-dashboard [data-placeholder]:empty::before {
+  color: var(--sub-text) !important;
+  opacity: 0.9;
 }
 
 .editorjs-dashboard h1.ce-header { font-size: 2rem; line-height: 1.25; }
@@ -210,7 +260,7 @@
 @media (max-width: 640px) {
   .write-panel { margin-top: 0; }
   .write-document { min-height: 560px; padding: 16px; }
-  .editorjs-dashboard { padding: 12px; }
+  .editorjs-dashboard { padding: 12px 12px 12px 44px; }
   .write-submit-bar { align-items: stretch; flex-wrap: wrap; padding: 12px; }
   .write-category, .write-tags, .write-visibility { width: 100%; flex-basis: 100%; }
   .write-message { order: 3; flex-basis: 100%; text-align: left; }

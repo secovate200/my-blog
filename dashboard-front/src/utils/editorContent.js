@@ -1,3 +1,4 @@
+/** Editor.js 문서를 검색·목록 미리보기에 적합한 일반 텍스트로 정규화합니다. */
 function htmlToText(value = "") {
   if (typeof document === "undefined") {
     return String(value)

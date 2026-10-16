@@ -2,3 +2,5 @@ Django==6.0.9
 django-smartbase-admin==2.5.0
 djangorestframework==3.18.1
 psycopg[binary]==3.3.6
+gunicorn==23.0.0
+whitenoise==6.11.0

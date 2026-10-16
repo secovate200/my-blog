@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild ./src/index.js --bundle --minify --outfile=../static/admin/editorjs-admin.js"
+    "build": "esbuild ./src/index.js --bundle --minify --outfile=../static/admin/editorjs-admin-v3.js"
   },
   "dependencies": {
     "@editorjs/attaches": "1.3.2",

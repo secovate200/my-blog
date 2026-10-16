@@ -1,3 +1,4 @@
+/** API 오류 상태를 지원되는 오류 화면으로 제한해 잘못된 경로 이동을 방지합니다. */
 const errorStatusPages = new Set([400, 401, 403, 404, 429, 500]);
 
 export function getErrorStatus(error, fallback = 500) {

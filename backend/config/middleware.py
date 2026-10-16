@@ -17,7 +17,7 @@ class ObservabilityMiddleware:
             response = self.get_response(request)
         except Exception:
             request_logger.exception(
-                "Unhandled request exception",
+                "요청 처리 중 예기치 않은 오류가 발생했습니다.",
                 extra={
                     "event": "request_error",
                     "request_id": request_id,
@@ -33,9 +33,15 @@ class ObservabilityMiddleware:
         response.headers["X-Request-ID"] = request_id
         if not request.path.startswith(("/static/", "/media/", "/health/")):
             status = response.status_code
-            log = request_logger.error if status >= 500 else request_logger.warning if status >= 400 else request_logger.info
+            log = (
+                request_logger.error
+                if status >= 500
+                else request_logger.warning
+                if status >= 400
+                else request_logger.info
+            )
             log(
-                "%s %s completed with %s",
+                "%s %s 요청이 HTTP %s 상태로 완료되었습니다.",
                 request.method,
                 request.path,
                 status,
@@ -52,7 +58,7 @@ class ObservabilityMiddleware:
 
 
 class SameOriginFrameProtectionMiddleware:
-    """Allow SimpleUI's same-origin frames while blocking external embedding."""
+    """동일 출처 프레임은 허용하고 외부 사이트의 화면 삽입은 차단합니다."""
 
     def __init__(self, get_response):
         self.get_response = get_response

@@ -221,11 +221,32 @@ function initialize(textarea) {
   const form = textarea.form;
   form?.addEventListener("submit", async (event) => {
     if (form.dataset.editorjsSubmitting) return;
+
     event.preventDefault();
-    textarea.value = JSON.stringify(await editor.save());
-    form.dataset.editorjsSubmitting = "true";
-    form.requestSubmit(event.submitter);
-  });
+    event.stopImmediatePropagation();
+
+    const submitter = event.submitter;
+    form.dataset.editorjsSubmitting = "syncing";
+
+    try {
+      await editor.isReady;
+      textarea.value = JSON.stringify(await editor.save());
+
+      if (submitter?.name) {
+        const submitAction = document.createElement("input");
+        submitAction.type = "hidden";
+        submitAction.name = submitter.name;
+        submitAction.value = submitter.value;
+        form.appendChild(submitAction);
+      }
+
+      form.dataset.editorjsSubmitting = "true";
+      HTMLFormElement.prototype.submit.call(form);
+    } catch (error) {
+      delete form.dataset.editorjsSubmitting;
+      console.error("Editor.js 내용을 저장하지 못했습니다.", error);
+    }
+  }, true);
 }
 
 function initializeAll(root = document) {

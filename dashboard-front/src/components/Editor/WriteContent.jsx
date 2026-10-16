@@ -1,3 +1,7 @@
+/**
+ * 게시글 작성 폼의 입력, 에디터 저장, 제출 오류를 조율합니다.
+ * Editor.js의 비동기 저장이 끝난 뒤 API를 호출해 본문 누락을 방지합니다.
+ */
 import { useRef, useState } from "react";
 import "./Write.css";
 import { createPost, createResearchPost, updatePost, updateResearchPost } from "../../api";

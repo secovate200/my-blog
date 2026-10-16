@@ -1,42 +1,27 @@
-function cookie(name) {
-  return document.cookie.split("; ").find((item) => item.startsWith(`${name}=`))?.split("=")[1];
-}
+/** 프로젝트 연구 글 API를 한곳에서 관리합니다. */
+import { apiRequest } from "./client";
 
-async function parseResponse(response) {
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.detail || "연구 데이터를 처리하지 못했습니다.");
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-}
-
-async function csrfToken() {
-  await parseResponse(await fetch("/blog/auth/csrf/", { credentials: "same-origin" }));
-  return decodeURIComponent(cookie("csrftoken") ?? "");
-}
+const RESEARCH_ERROR_MESSAGE = "연구 데이터를 처리하지 못했습니다.";
 
 export async function fetchAdminProjects() {
-  return parseResponse(await fetch("/blog/dashboard/projects/", { credentials: "same-origin" }));
+  return apiRequest("/blog/dashboard/projects/", { fallbackMessage: RESEARCH_ERROR_MESSAGE });
 }
 
 export async function fetchAdminResearchPosts(project) {
-  return parseResponse(await fetch(`/blog/dashboard/projects/${encodeURIComponent(project)}/posts/`, { credentials: "same-origin" }));
+  return apiRequest(`/blog/dashboard/projects/${encodeURIComponent(project)}/posts/`, { fallbackMessage: RESEARCH_ERROR_MESSAGE });
 }
 
 export async function fetchAdminResearchPost(id) {
-  return parseResponse(await fetch(`/blog/dashboard/research-posts/${encodeURIComponent(id)}/`, { credentials: "same-origin" }));
+  return apiRequest(`/blog/dashboard/research-posts/${encodeURIComponent(id)}/`, { fallbackMessage: RESEARCH_ERROR_MESSAGE });
 }
 
 async function writeResearchPost(url, method, data) {
-  const token = await csrfToken();
-  return parseResponse(await fetch(url, {
+  return apiRequest(url, {
     method,
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": token },
-    body: JSON.stringify(data),
-  }));
+    data,
+    requiresCsrf: true,
+    fallbackMessage: RESEARCH_ERROR_MESSAGE,
+  });
 }
 
 export function createResearchPost(data) {

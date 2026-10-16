@@ -1,3 +1,4 @@
+/** 실제 API 전환 전의 로컬 개발 데이터를 안전하게 읽고 저장하는 어댑터입니다. */
 export const STORAGE_KEYS = {
   posts: "secovate-demo-posts",
   projects: "secovate-demo-projects",

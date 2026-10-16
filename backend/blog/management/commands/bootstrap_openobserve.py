@@ -26,7 +26,8 @@ class Command(BaseCommand):
         except HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(
-                f"OpenObserve API {method} {path} failed ({error.code}): {detail}"
+                f"OpenObserve API 요청에 실패했습니다. "
+                f"메서드={method}, 경로={path}, 상태={error.code}, 상세={detail}"
             ) from error
 
     def _upsert(self, collection_path, item_path, payload):

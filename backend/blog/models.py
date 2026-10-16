@@ -1,6 +1,40 @@
+"""블로그, 프로젝트, 문의 도메인의 데이터 구조와 불변 조건을 정의합니다."""
+
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 import uuid
+
+
+class SiteProfile(models.Model):
+    """공개 블로그 사이드바에 표시할 단일 운영자 프로필입니다."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    name = models.CharField("이름", max_length=100, default="SECOVATE200")
+    role = models.CharField("역할", max_length=100, default="BUG HUNTER", blank=True)
+    bio = models.TextField("소개", max_length=500, blank=True)
+    logo = models.FileField(
+        "로고",
+        upload_to="profile/",
+        blank=True,
+        validators=[FileExtensionValidator(["png", "jpg", "jpeg", "webp", "gif"])],
+        help_text="PNG, JPG, WEBP 또는 GIF 이미지를 업로드하세요.",
+    )
+    instagram_url = models.URLField("Instagram URL", blank=True)
+    github_url = models.URLField("GitHub URL", blank=True)
+    facebook_url = models.URLField("Facebook URL", blank=True)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
+
+    class Meta:
+        verbose_name = "블로그 프로필"
+        verbose_name_plural = "블로그 프로필"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
 
 
 def asset_upload_path(instance, filename):

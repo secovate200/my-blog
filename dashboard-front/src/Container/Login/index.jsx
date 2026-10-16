@@ -1,8 +1,11 @@
+/** 로그인과 회원가입 폼을 제공하고 제출 중 중복 요청과 오류 상태를 관리합니다. */
 import { useState } from "react";
 import { FaArrowLeft, FaCircleCheck, FaEnvelope, FaEye, FaEyeSlash, FaLock, FaMoon, FaSun, FaUser } from "react-icons/fa6";
 import blogLogo from "../../assets/logo.png";
 import { navigateToErrorPage } from "../../utils/errorNavigation";
 import "./style.css";
+
+const BLOG_FRONTEND_URL = import.meta.env.VITE_BLOG_URL ?? "http://localhost:5173";
 
 export function LoginContent({ theme, onToggleTheme, onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,7 +19,7 @@ export function LoginContent({ theme, onToggleTheme, onLogin }) {
     setSubmitting(true);
     setMessage("");
     try {
-      await onLogin({ account: data.get("account"), password: data.get("password"), remember: false });
+      await onLogin({ email: data.get("email"), password: data.get("password"), remember: false });
     } catch (error) {
       if (error.status === 400 || error.status === 403) setMessage(error.message);
       else navigateToErrorPage(error);
@@ -28,16 +31,16 @@ export function LoginContent({ theme, onToggleTheme, onLogin }) {
   return (
     <main className="login-screen">
       <header className="login-toolbar">
-        <a href="http://127.0.0.1:5173"><FaArrowLeft aria-hidden="true" /> 블로그로 돌아가기</a>
+        <a href={BLOG_FRONTEND_URL}><FaArrowLeft aria-hidden="true" /> 블로그로 돌아가기</a>
         <button type="button" onClick={onToggleTheme} aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}>
           {theme === "dark" ? <FaSun /> : <FaMoon />}
         </button>
       </header>
       <section className="login-card" aria-labelledby="login-title">
-        <a className="login-blog-logo" href="http://127.0.0.1:5173" aria-label="SECOVATE200 BLOG 홈"><img src={blogLogo} alt="SECOVATE200 Bug Hunter" /></a>
+        <a className="login-blog-logo" href={BLOG_FRONTEND_URL} aria-label="SECOVATE200 BLOG 홈"><img src={blogLogo} alt="SECOVATE200 Bug Hunter" /></a>
         <div className="login-copy"><h1 id="login-title">로그인</h1></div>
         <form onSubmit={submit}>
-          <label className="login-input"><FaUser aria-hidden="true" /><input name="account" type="text" autoComplete="username" placeholder="아이디 또는 이메일" required /></label>
+          <label className="login-input"><FaEnvelope aria-hidden="true" /><input name="email" type="email" autoComplete="email" placeholder="이메일" required /></label>
           <label className="login-input"><FaLock aria-hidden="true" /><input name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="비밀번호" required /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}>{showPassword ? <FaEyeSlash /> : <FaEye />}</button></label>
           <button className="login-submit" type="submit" disabled={submitting}>{submitting ? "확인 중..." : "로그인"}</button>
           <p className="login-message" role="status" aria-live="polite">{message}</p>
@@ -86,7 +89,7 @@ export function SignupContent({ theme, onToggleTheme, onSignup }) {
         </button>
       </header>
       <section className="login-card" aria-labelledby="signup-title">
-        <a className="login-blog-logo" href="http://127.0.0.1:5173" aria-label="SECOVATE200 BLOG 홈"><img src={blogLogo} alt="SECOVATE200 Bug Hunter" /></a>
+        <a className="login-blog-logo" href={BLOG_FRONTEND_URL} aria-label="SECOVATE200 BLOG 홈"><img src={blogLogo} alt="SECOVATE200 Bug Hunter" /></a>
         {success ? (
           <div className="signup-complete" role="status" aria-live="polite">
             <FaCircleCheck aria-hidden="true" />

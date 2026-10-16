@@ -1,67 +1,47 @@
-function cookie(name) {
-  return document.cookie.split("; ").find((item) => item.startsWith(`${name}=`))?.split("=")[1];
-}
-
-async function responseJson(response) {
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.detail || "요청을 처리하지 못했습니다.");
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-}
-
-async function ensureCsrf() {
-  await responseJson(await fetch("/blog/auth/csrf/", { credentials: "same-origin" }));
-  return decodeURIComponent(cookie("csrftoken") ?? "");
-}
+/** 인증 API의 입력 값을 서버 계약에 맞게 변환합니다. */
+import { apiRequest } from "./client";
 
 export async function getCurrentUser() {
-  const response = await fetch("/blog/auth/me/", { credentials: "same-origin" });
-  if (response.status === 401 || response.status === 403) return null;
-  return responseJson(response);
+  try {
+    return await apiRequest("/blog/auth/me/");
+  } catch (error) {
+    // 앱 최초 진입 시 비로그인 상태는 정상 흐름이므로 오류 화면으로 보내지 않습니다.
+    if (error.status === 401 || error.status === 403) return null;
+    throw error;
+  }
 }
 
-export async function login({ account, password }) {
-  const csrfToken = await ensureCsrf();
-  return responseJson(await fetch("/blog/auth/login/", {
+export async function login({ email, password }) {
+  return apiRequest("/blog/auth/login/", {
     method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-    body: JSON.stringify({ account, password }),
-  }));
+    data: { email, password },
+    requiresCsrf: true,
+  });
 }
 
 export async function signup({ name, email, password }) {
-  const csrfToken = await ensureCsrf();
-  return responseJson(await fetch("/blog/auth/signup/", {
+  return apiRequest("/blog/auth/signup/", {
     method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-    body: JSON.stringify({ name, email, password }),
-  }));
+    data: { name, email, password },
+    requiresCsrf: true,
+  });
 }
 
 export async function logout() {
-  const csrfToken = await ensureCsrf();
-  return responseJson(await fetch("/blog/auth/logout/", {
+  return apiRequest("/blog/auth/logout/", {
     method: "POST",
-    credentials: "same-origin",
-    headers: { "X-CSRFToken": csrfToken },
-  }));
+    requiresCsrf: true,
+  });
 }
 
 export async function changePassword({ currentPassword, newPassword, newPasswordConfirm }) {
-  const csrfToken = await ensureCsrf();
-  return responseJson(await fetch("/blog/auth/password/", {
+  return apiRequest("/blog/auth/password/", {
     method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-    body: JSON.stringify({
+    requiresCsrf: true,
+    data: {
       current_password: currentPassword,
       new_password: newPassword,
       new_password_confirm: newPasswordConfirm,
-    }),
-  }));
+    },
+  });
 }

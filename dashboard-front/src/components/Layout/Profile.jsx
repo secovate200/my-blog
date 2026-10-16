@@ -1,3 +1,4 @@
+/** 사용자 메뉴의 열림 상태와 바깥 영역 클릭 닫기를 관리합니다. */
 import {
   FaHouseUser,
   FaPen,

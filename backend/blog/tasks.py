@@ -1,3 +1,9 @@
+"""느린 이메일 발송을 HTTP 요청 처리와 분리하고 실패를 안전하게 기록합니다.
+
+호출부가 실행 방식을 알지 않게 하여 추후 외부 작업 큐로 교체할 때 뷰와
+서비스 계층을 수정하지 않아도 되도록 합니다.
+"""
+
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
@@ -29,13 +35,13 @@ def _run_contact_notification(contact_id, sender, notification_name):
         sender(contact)
     except ContactMessage.DoesNotExist:
         logger.warning(
-            "Contact %s disappeared before the %s notification ran",
+            "문의 %s가 %s 알림 작업 실행 전에 삭제되었습니다.",
             contact_id,
             notification_name,
         )
     except Exception:
         logger.exception(
-            "Unexpected failure while sending the %s notification for contact %s",
+            "%s 알림 발송 중 문의 %s에서 예기치 않은 오류가 발생했습니다.",
             notification_name,
             contact_id,
         )
@@ -44,7 +50,7 @@ def _run_contact_notification(contact_id, sender, notification_name):
 
 
 def enqueue_contact_notifications(contact_id):
-    """Send external contact notifications without blocking the HTTP response."""
+    """HTTP 응답을 지연시키지 않고 외부 문의 알림을 발송합니다."""
     _notification_executor.submit(
         _run_contact_notification,
         contact_id,
@@ -55,7 +61,7 @@ def enqueue_contact_notifications(contact_id):
         _run_contact_notification,
         contact_id,
         send_contact_receipt,
-        "receipt email",
+        "접수 확인 이메일",
     )
 
 
@@ -64,7 +70,7 @@ def _run_contact_reply(contact_id, replied_by_id):
     try:
         contact = ContactMessage.objects.get(pk=contact_id)
         if not send_contact_reply(contact):
-            logger.warning("Contact reply email failed for contact %s", contact_id)
+            logger.warning("문의 %s의 답변 이메일 발송에 실패했습니다.", contact_id)
             return
 
         sent_at = timezone.now()
@@ -76,12 +82,12 @@ def _run_contact_reply(contact_id, replied_by_id):
         )
     except ContactMessage.DoesNotExist:
         logger.warning(
-            "Contact %s disappeared before the reply email ran",
+            "문의 %s가 답변 이메일 작업 실행 전에 삭제되었습니다.",
             contact_id,
         )
     except Exception:
         logger.exception(
-            "Unexpected failure while sending the reply email for contact %s",
+            "문의 %s의 답변 이메일 발송 중 예기치 않은 오류가 발생했습니다.",
             contact_id,
         )
     finally:
@@ -89,7 +95,7 @@ def _run_contact_reply(contact_id, replied_by_id):
 
 
 def enqueue_contact_reply(contact_id, replied_by_id):
-    """Send a saved admin reply without blocking the admin response."""
+    """관리자 응답을 지연시키지 않고 저장된 문의 답변을 발송합니다."""
     _notification_executor.submit(_run_contact_reply, contact_id, replied_by_id)
 
 
@@ -100,13 +106,13 @@ def _run_user_notification(user_id, sender, notification_name):
         sender(user)
     except get_user_model().DoesNotExist:
         logger.warning(
-            "User %s disappeared before the %s notification ran",
+            "사용자 %s가 %s 알림 작업 실행 전에 삭제되었습니다.",
             user_id,
             notification_name,
         )
     except Exception:
         logger.exception(
-            "Unexpected failure while sending the %s notification for user %s",
+            "%s 알림 발송 중 사용자 %s에서 예기치 않은 오류가 발생했습니다.",
             notification_name,
             user_id,
         )
@@ -115,20 +121,20 @@ def _run_user_notification(user_id, sender, notification_name):
 
 
 def enqueue_signup_notification(user_id):
-    """Notify administrators of a signup without blocking the HTTP response."""
+    """HTTP 응답을 지연시키지 않고 관리자에게 신규 가입을 알립니다."""
     _notification_executor.submit(
         _run_user_notification,
         user_id,
         send_signup_notification,
-        "signup Discord",
+        "신규 가입 Discord",
     )
 
 
 def enqueue_account_approval_email(user_id):
-    """Send the approval email without blocking the admin save request."""
+    """관리자 저장 요청을 지연시키지 않고 계정 승인 이메일을 발송합니다."""
     _notification_executor.submit(
         _run_user_notification,
         user_id,
         send_account_approval_email,
-        "account approval email",
+        "계정 승인 이메일",
     )

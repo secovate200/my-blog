@@ -1,3 +1,4 @@
+/** 공개 블로그와 같은 키를 사용해 두 앱의 테마 선택을 동기화합니다. */
 const THEME_COOKIE = "secovate-theme";
 const THEME_STORAGE_KEY = "secovate-theme";
 const LEGACY_STORAGE_KEYS = ["theme", "blog-theme"];

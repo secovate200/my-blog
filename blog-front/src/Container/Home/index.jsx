@@ -1,3 +1,7 @@
+/**
+ * 최신 게시글을 불러와 검색·태그 필터와 카드 목록으로 표현하는 홈 화면입니다.
+ * 원본 응답과 파생 목록을 분리해 필터 변경이 불필요한 API 재호출로 이어지지 않게 합니다.
+ */
 import { useEffect, useState } from "react";
 import { FiCalendar, FiTag } from "react-icons/fi";
 import { useNavigate, useSearchParams } from "react-router-dom";

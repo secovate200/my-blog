@@ -1,3 +1,4 @@
+/** 로고와 탐색 메뉴를 묶어 모든 공개 페이지에 일관된 상단 영역을 제공합니다. */
 import "./style.css";
 
 const dashboardUrl = (
